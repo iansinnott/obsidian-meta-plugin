@@ -9,22 +9,33 @@ import {
   Setting,
 } from "obsidian";
 
+import { OpenAI } from "openai";
+
 interface MetaPluginSettings {
-  mySetting: string;
+  apiKey: string;
+  baseUrl: string;
 }
 
 const DEFAULT_SETTINGS: MetaPluginSettings = {
-  mySetting: "default",
+  apiKey: "",
+  baseUrl: "https://api.openai.com",
 };
 
 export default class MetaPlugin extends Plugin {
   settings: MetaPluginSettings;
+  llm: OpenAI;
 
   async onload() {
     await this.loadSettings();
 
+    this.llm = new OpenAI({
+      apiKey: this.settings.apiKey,
+      baseURL: this.settings.baseUrl,
+      dangerouslyAllowBrowser: true,
+    });
+
     // This creates an icon in the left ribbon.
-    const ribbonIconEl = this.addRibbonIcon("dice", "Sample Plugin", (evt: MouseEvent) => {
+    const ribbonIconEl = this.addRibbonIcon("brain", "Obsidian Meta Plugin", (evt: MouseEvent) => {
       // Called when the user clicks the icon.
       new Notice("This is a notice!");
     });
@@ -72,8 +83,10 @@ export default class MetaPlugin extends Plugin {
       },
     });
 
+    const settingsTab = new MetaSettingTab(this.app, this);
+
     // This adds a settings tab so the user can configure various aspects of the plugin
-    this.addSettingTab(new MetaSettingTab(this.app, this));
+    this.addSettingTab(settingsTab);
 
     // If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
     // Using this function will automatically remove the event listener when this plugin is disabled.
@@ -93,6 +106,13 @@ export default class MetaPlugin extends Plugin {
 
   async saveSettings() {
     await this.saveData(this.settings);
+
+    // Re-initialize LLM with new settings
+    this.llm = new OpenAI({
+      apiKey: this.settings.apiKey,
+      baseURL: this.settings.baseUrl,
+      dangerouslyAllowBrowser: true,
+    });
   }
 }
 
@@ -126,16 +146,63 @@ class MetaSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl)
-      .setName("Setting #1")
-      .setDesc("It's a secret")
+      .setName("API Key")
+      .setDesc("Enter your OpenAI API key here")
+      .addText((text) => {
+        text
+          .setPlaceholder("Enter your API key")
+          .setValue(this.plugin.settings.apiKey)
+          .onChange(async (value) => {
+            this.plugin.settings.apiKey = value;
+            await this.plugin.saveSettings();
+          });
+        // Set the input type to password to hide the content
+        text.inputEl.type = "password";
+        return text;
+      });
+
+    // Base URL text input
+    new Setting(containerEl)
+      .setName("Base URL")
+      .setDesc("Enter the base URL for the API or select a preset below.")
       .addText((text) =>
         text
-          .setPlaceholder("Enter your secret")
-          .setValue(this.plugin.settings.mySetting)
+          .setPlaceholder("https://api.openai.com")
+          .setValue(this.plugin.settings.baseUrl)
           .onChange(async (value) => {
-            this.plugin.settings.mySetting = value;
+            this.plugin.settings.baseUrl = value;
             await this.plugin.saveSettings();
           })
       );
+
+    // Add a separate section for preset API endpoint buttons
+    const presetButtonSetting = new Setting(containerEl).setDesc("Select a preset API endpoint");
+
+    // Add OpenAI button
+    presetButtonSetting.addButton((button) => {
+      return button.setButtonText("OpenAI").onClick(async () => {
+        this.plugin.settings.baseUrl = "https://api.openai.com";
+        await this.plugin.saveSettings();
+        this.display(); // Refresh the display to update the text field
+      });
+    });
+
+    // Add OpenRouter button
+    presetButtonSetting.addButton((button) => {
+      return button.setButtonText("OpenRouter").onClick(async () => {
+        this.plugin.settings.baseUrl = "https://openrouter.ai/api";
+        await this.plugin.saveSettings();
+        this.display(); // Refresh the display to update the text field
+      });
+    });
+
+    // Add Ollama button
+    presetButtonSetting.addButton((button) => {
+      return button.setButtonText("Ollama").onClick(async () => {
+        this.plugin.settings.baseUrl = "http://localhost:11434";
+        await this.plugin.saveSettings();
+        this.display(); // Refresh the display to update the text field
+      });
+    });
   }
 }
