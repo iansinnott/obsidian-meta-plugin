@@ -14,11 +14,15 @@ import { OpenAI } from "openai";
 interface MetaPluginSettings {
   apiKey: string;
   baseUrl: string;
+  model: string;
+  availableModels: string[];
 }
 
 const DEFAULT_SETTINGS: MetaPluginSettings = {
   apiKey: "",
   baseUrl: "https://api.openai.com",
+  model: "",
+  availableModels: [],
 };
 
 export default class MetaPlugin extends Plugin {
@@ -51,7 +55,7 @@ export default class MetaPlugin extends Plugin {
       id: "open-sample-modal-simple",
       name: "Open sample modal (simple)",
       callback: () => {
-        new SampleModal(this.app).open();
+        new SampleModal(this.app, this).open();
       },
     });
     // This adds an editor command that can perform some operation on the current editor instance
@@ -74,7 +78,7 @@ export default class MetaPlugin extends Plugin {
           // If checking is true, we're simply "checking" if the command can be run.
           // If checking is false, then we want to actually perform the operation.
           if (!checking) {
-            new SampleModal(this.app).open();
+            new SampleModal(this.app, this).open();
           }
 
           // This command will only show up in Command Palette when the check function returns true
@@ -114,16 +118,64 @@ export default class MetaPlugin extends Plugin {
       dangerouslyAllowBrowser: true,
     });
   }
+
+  async refreshModelList(): Promise<string[]> {
+    const models = (await this.llm.models.list()).data.map((model) => model.id);
+    this.settings.availableModels = models;
+    if (!this.settings.model || !models.includes(this.settings.model)) {
+      this.settings.model = models[0];
+    }
+    await this.saveSettings();
+    return models;
+  }
 }
 
 class SampleModal extends Modal {
-  constructor(app: App) {
+  plugin: MetaPlugin;
+
+  constructor(app: App, plugin: MetaPlugin) {
     super(app);
+    this.plugin = plugin;
   }
 
-  onOpen() {
+  async onOpen() {
     const { contentEl } = this;
-    contentEl.setText("Woah!");
+    contentEl.setText("Loading...");
+
+    try {
+      const stream = await this.plugin.llm.chat.completions.create({
+        model: this.plugin.settings.model,
+        messages: [
+          {
+            role: "user",
+            content: "Hello, how are you?",
+          },
+        ],
+        stream: true,
+      });
+
+      // Clear the loading message
+      contentEl.setText("");
+
+      // Initialize an empty response string
+      let fullResponse = "";
+
+      // Process each chunk as it arrives
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || "";
+        if (content) {
+          fullResponse += content;
+          contentEl.setText(fullResponse);
+        }
+      }
+
+      // Handle empty response case
+      if (!fullResponse) {
+        contentEl.setText("[Empty response]");
+      }
+    } catch (error) {
+      contentEl.setText(`Error: ${error.message}`);
+    }
   }
 
   onClose() {
@@ -181,7 +233,7 @@ class MetaSettingTab extends PluginSettingTab {
     // Add OpenAI button
     presetButtonSetting.addButton((button) => {
       return button.setButtonText("OpenAI").onClick(async () => {
-        this.plugin.settings.baseUrl = "https://api.openai.com";
+        this.plugin.settings.baseUrl = "https://api.openai.com/v1";
         await this.plugin.saveSettings();
         this.display(); // Refresh the display to update the text field
       });
@@ -190,7 +242,7 @@ class MetaSettingTab extends PluginSettingTab {
     // Add OpenRouter button
     presetButtonSetting.addButton((button) => {
       return button.setButtonText("OpenRouter").onClick(async () => {
-        this.plugin.settings.baseUrl = "https://openrouter.ai/api";
+        this.plugin.settings.baseUrl = "https://openrouter.ai/api/v1";
         await this.plugin.saveSettings();
         this.display(); // Refresh the display to update the text field
       });
@@ -199,10 +251,48 @@ class MetaSettingTab extends PluginSettingTab {
     // Add Ollama button
     presetButtonSetting.addButton((button) => {
       return button.setButtonText("Ollama").onClick(async () => {
-        this.plugin.settings.baseUrl = "http://localhost:11434";
+        this.plugin.settings.baseUrl = "http://localhost:11434/v1";
         await this.plugin.saveSettings();
         this.display(); // Refresh the display to update the text field
       });
+    });
+
+    // Add Model Selection Dropdown and Refresh Button
+    const modelSetting = new Setting(containerEl)
+      .setName("Model")
+      .setDesc("Select the model to use for generation.");
+
+    // Dropdown for model selection
+    modelSetting.addDropdown((dropdown) => {
+      // Populate dropdown options from settings
+      // Use an empty array fallback if availableModels is undefined/null
+      (this.plugin.settings.availableModels || []).forEach((model) => {
+        dropdown.addOption(model, model);
+      });
+      dropdown.setValue(this.plugin.settings.model).onChange(async (value) => {
+        this.plugin.settings.model = value;
+        await this.plugin.saveSettings();
+        console.log("Selected model:", value);
+      });
+    });
+
+    // Refresh button for models
+    modelSetting.addButton((button) => {
+      button
+        .setButtonText("Refresh")
+        .setCta() // Makes it stand out slightly
+        .setTooltip("Fetch the latest available models from the API")
+        .onClick(async () => {
+          button.setDisabled(true).setButtonText("Refreshing..."); // Disable button during refresh
+          try {
+            await this.plugin.refreshModelList();
+            this.display(); // Refresh the settings display to update the dropdown
+          } catch (error) {
+            console.error("Error refreshing model list:", error);
+            new Notice("Failed to refresh model list. Check console.");
+            button.setDisabled(false).setButtonText("Refresh");
+          }
+        });
     });
   }
 }
