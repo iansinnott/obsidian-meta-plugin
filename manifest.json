@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "obsidian-meta-plugin",
+	"name": "Obsidian Meta Plugin",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
-	"isDesktopOnly": false
+	"description": "A plugin for Obsidian that can modify Obsidian. It can create or modify plugins, themes and settings. Think of it as your personal Obsidian developer.",
+	"author": "Ian Sinnott",
+	"authorUrl": "https://github.com/iansinnott",
+	"fundingUrl": "https://github.com/sponsors/iansinnott",
+	"isDesktopOnly": true
 }
