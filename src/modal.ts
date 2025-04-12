@@ -1,4 +1,4 @@
-import { App, Modal } from "obsidian";
+import { type App, Modal } from "obsidian";
 import { IMetaPlugin } from "./types";
 
 export class SampleModal extends Modal {
@@ -26,8 +26,8 @@ export class SampleModal extends Modal {
       },
     });
 
-    // Create submit button
-    const submitBtn = form.createEl("button", {
+    // Submit button
+    form.createEl("button", {
       text: "Submit",
       attr: {
         type: "submit",
