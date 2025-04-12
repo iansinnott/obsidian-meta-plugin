@@ -1,5 +1,6 @@
-import { Plugin } from "obsidian";
-import { OpenAI } from "openai";
+import type { Plugin } from "obsidian";
+import type { OpenAI } from "openai";
+import type { Provider } from "ai";
 
 export interface MetaPluginSettings {
   apiKey: string;
@@ -18,7 +19,8 @@ export const DEFAULT_SETTINGS: MetaPluginSettings = {
 // Define an interface that extends Plugin for the plugin to be used by other modules
 export interface IMetaPlugin extends Plugin {
   settings: MetaPluginSettings;
-  llm: OpenAI;
+  api: OpenAI;
+  provider: Provider;
   saveSettings(): Promise<void>;
   refreshModelList(): Promise<string[]>;
 }

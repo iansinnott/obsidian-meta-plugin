@@ -1,29 +1,30 @@
-import {
-  App,
-  Editor,
-  MarkdownView,
-  Notice,
-  Plugin,
-} from "obsidian";
+import { type App, Editor, MarkdownView, Notice, Plugin } from "obsidian";
 
 import { OpenAI } from "openai";
 import { MetaSettingTab } from "./src/settings";
 import { SampleModal } from "./src/modal";
 import { MetaPluginSettings, DEFAULT_SETTINGS } from "./src/types";
-
-
+import { createOpenAI } from "@ai-sdk/openai";
+import type { Provider } from "ai";
 
 export default class MetaPlugin extends Plugin {
   settings: MetaPluginSettings;
-  llm: OpenAI;
+  provider: Provider;
+  api: OpenAI;
 
   async onload() {
     await this.loadSettings();
 
-    this.llm = new OpenAI({
+    // No sonnet for now, sorry sonnet
+    this.api = new OpenAI({
       apiKey: this.settings.apiKey,
       baseURL: this.settings.baseUrl,
       dangerouslyAllowBrowser: true,
+    });
+
+    this.provider = createOpenAI({
+      apiKey: this.settings.apiKey,
+      baseURL: this.settings.baseUrl,
     });
 
     // This creates an icon in the left ribbon.
@@ -100,7 +101,7 @@ export default class MetaPlugin extends Plugin {
     await this.saveData(this.settings);
 
     // Re-initialize LLM with new settings
-    this.llm = new OpenAI({
+    this.api = new OpenAI({
       apiKey: this.settings.apiKey,
       baseURL: this.settings.baseUrl,
       dangerouslyAllowBrowser: true,
@@ -108,7 +109,7 @@ export default class MetaPlugin extends Plugin {
   }
 
   async refreshModelList(): Promise<string[]> {
-    const models = (await this.llm.models.list()).data.map((model) => model.id);
+    const models = (await this.api.models.list()).data.map((model) => model.id);
     this.settings.availableModels = models;
     if (!this.settings.model || !models.includes(this.settings.model)) {
       this.settings.model = models[0];
@@ -117,7 +118,3 @@ export default class MetaPlugin extends Plugin {
     return models;
   }
 }
-
-
-
-

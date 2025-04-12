@@ -47,7 +47,7 @@ export class SampleModal extends Modal {
         const resultContainer = contentEl.createDiv();
         const loadingEl = resultContainer.createEl("p", { text: "Loading..." });
 
-        const completion = await this.plugin.llm.chat.completions.create({
+        const completion = await this.plugin.api.chat.completions.create({
           model: this.plugin.settings.model,
           messages: [
             {
