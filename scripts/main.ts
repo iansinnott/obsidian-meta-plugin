@@ -1,9 +1,10 @@
-import { sonnet, haiku, optimus, llama4Maverick, llama4Scout } from "@/src/llm/models";
+import { sonnet, haiku, optimus, llama4Maverick, llama4Scout, gemma } from "@/src/llm/models";
 import { generateId, generateText, streamText } from "ai";
 import { type BaseCLIContext, type CLICommandSPec, runCommands } from "./lib/cli";
 import { fmt, omit } from "@/src/llm/utils";
 import { weatherTool } from "@/src/llm/tools/weather";
 import { Agent } from "@/src/llm/agents";
+import { z } from "zod";
 
 const getCLIContext = async (baseCtx: BaseCLIContext) => {
   return {
@@ -20,11 +21,54 @@ const modelByArg = {
   optimus: optimus,
   llama4Maverick: llama4Maverick,
   llama4Scout: llama4Scout,
+  gemma: gemma,
 };
 
 const DEFAULT_MODEL = "llama4Maverick";
 
 const commands: CLICommandSPec<CLIContext> = {
+  "dev:x": {
+    description: "x",
+    exec: async (ctx) => {
+      const weatherAgent = new Agent({
+        name: "weather agent",
+        instructions: `You help users find weather for various locales`,
+        model: sonnet,
+        contextSchema: z.object({
+          useMetric: z.boolean().optional(),
+          stuff: z.string(),
+        }),
+        tools: {
+          weatherTool,
+        },
+      });
+
+      const result = weatherAgent.streamText(
+        {
+          prompt: "What's the weather like in San Francisco?",
+        },
+        {
+          stuff: "some stuff",
+          useMetric: true,
+        }
+      );
+
+      for await (const chunk of result.fullStream) {
+        switch (chunk.type) {
+          case "text-delta":
+            process.stdout.write(chunk.textDelta);
+            break;
+          case "tool-call":
+          case "tool-call-delta":
+          case "tool-call-streaming-start":
+          case "tool-result":
+            console.log("\n[Tool Call]:", JSON.stringify(chunk));
+            break;
+        }
+      }
+    },
+  },
+
   /**
    * Commands can be defined using a "spec" like this, which includes a
    * description which will be printed in the help.
@@ -75,6 +119,10 @@ const commands: CLICommandSPec<CLIContext> = {
         name: "weather agent",
         instructions: `You help users find weather for various locales`,
         model: sonnet,
+        contextSchema: z.object({
+          useMetric: z.boolean().optional(),
+          stuff: z.string(),
+        }),
         tools: {
           weatherTool,
         },
