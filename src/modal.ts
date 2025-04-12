@@ -1,5 +1,6 @@
 import { type App, Modal } from "obsidian";
-import { IMetaPlugin } from "./types";
+
+import type { MetaPlugin as IMetaPlugin } from "./plugin";
 
 export class SampleModal extends Modal {
   plugin: IMetaPlugin;

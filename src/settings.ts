@@ -1,5 +1,12 @@
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
-import { IMetaPlugin } from "./types";
+import type { MetaPlugin as IMetaPlugin } from "./plugin";
+
+export const DEFAULT_SETTINGS = {
+  apiKey: "",
+  baseUrl: "https://api.openai.com",
+  model: "",
+  availableModels: [] as string[],
+};
 
 export class MetaSettingTab extends PluginSettingTab {
   plugin: IMetaPlugin;
