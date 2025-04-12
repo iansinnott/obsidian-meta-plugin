@@ -1,7 +1,8 @@
 import { generateText, streamText, tool, type LanguageModelV1, type ToolSet } from "ai";
 import { sonnet } from "./models";
 import { z } from "zod";
-import { listFilesTool } from "./tools/obsidian";
+import { listFilesTool, obsidianToolContextSchema } from "./tools/obsidian";
+import type { App } from "obsidian";
 
 interface AgentArgs<TTools extends ToolSet, TSchema extends z.ZodTypeAny = z.ZodObject<{}>> {
   name: string;
@@ -84,14 +85,11 @@ export class Agent<
     });
   }
 }
-
 export const obsidianAgent = new Agent({
   name: "obsidian agent",
   instructions: `You help users manage their Obsidian vault`,
   model: sonnet,
-  contextSchema: z.object({
-    app: z.any(),
-  }),
+  contextSchema: obsidianToolContextSchema,
   tools: {
     listFilesTool,
   },
