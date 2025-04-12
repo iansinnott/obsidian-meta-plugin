@@ -1,4 +1,4 @@
-import { generateText, streamText, type LanguageModelV1, type ToolSet } from "ai";
+import { generateText, streamText, tool, type LanguageModelV1, type ToolSet } from "ai";
 import { sonnet } from "./models";
 import { z } from "zod";
 
@@ -38,6 +38,23 @@ export class Agent<
     this.contextSchema = args.contextSchema;
   }
 
+  private wrapTools(tools: TTools, context?: TContext): TTools {
+    if (!context) {
+      return tools;
+    }
+
+    return Object.fromEntries(
+      Object.entries(tools).map(([key, { execute, ...toolConfig }]) => {
+        const newTool = tool({
+          ...toolConfig,
+          // @ts-expect-error
+          execute: (args, options) => execute(args, { ...options, context }),
+        });
+        return [key, newTool];
+      })
+    ) as TTools;
+  }
+
   async generateText(arg: GenerateTextArg, context?: TContext) {
     // Validate context with zod schema if provided
     if (this.contextSchema && context) {
@@ -47,7 +64,7 @@ export class Agent<
     return generateText<TTools, unknown, unknown>({
       system: this.instructions,
       model: this.model,
-      tools: this.tools,
+      tools: this.wrapTools(this.tools, context),
       ...arg,
     });
   }
@@ -61,7 +78,7 @@ export class Agent<
     return streamText<TTools, unknown, unknown>({
       system: this.instructions,
       model: this.model,
-      tools: this.tools,
+      tools: this.wrapTools(this.tools, context),
       ...arg,
     });
   }
