@@ -8,10 +8,11 @@
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
-	"keywords": [ "obsidian", "plugin", "meta", "LLM" ],
+	"keywords": ["obsidian", "plugin", "meta", "LLM"],
 	"author": "Ian Sinnott",
 	"license": "MIT",
 	"devDependencies": {
+		"@types/bun": "^1.2.9",
 		"@types/node": "^16.11.6",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
