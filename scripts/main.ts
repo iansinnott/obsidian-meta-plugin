@@ -3,6 +3,7 @@ import { generateId, generateText, streamText } from "ai";
 import { type BaseCLIContext, type CLICommandSPec, runCommands } from "./lib/cli";
 import { fmt, omit } from "@/src/llm/utils";
 import { weatherTool } from "@/src/llm/tools/weather";
+import { Agent } from "@/src/llm/agents";
 
 const getCLIContext = async (baseCtx: BaseCLIContext) => {
   return {
@@ -70,20 +71,23 @@ const commands: CLICommandSPec<CLIContext> = {
       }
       const prompt = args[0];
 
+      const weatherAgent = new Agent({
+        name: "weather agent",
+        instructions: `You help users find weather for various locales`,
+        model: sonnet,
+        tools: {
+          weatherTool,
+        },
+      });
+
       process.stdout.write(".");
       const interval = setInterval(() => {
         process.stdout.write(".");
       }, 100);
 
       try {
-        // First, create a regular completion in the background
-        const result = streamText({
-          model,
+        const result = weatherAgent.streamText({
           prompt,
-          system: "You are a helpful assistant.",
-          tools: {
-            weatherTool,
-          },
           maxSteps: 10,
           maxRetries: 2,
           maxTokens: 8000,
