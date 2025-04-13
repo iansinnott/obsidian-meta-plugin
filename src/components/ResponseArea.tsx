@@ -6,7 +6,6 @@ import type { ResponseChunk } from "./types";
 interface ResponseAreaProps {
   responseChunks: ResponseChunk[];
   isLoading: boolean;
-  component: any; // Obsidian Component
 }
 
 interface Message {
@@ -38,18 +37,18 @@ const ToolCallView: React.FC<ToolCall> = ({ id, toolName, args, result }) => {
       </code>
       {result && (
         <code className="meta-p-3 meta-bg-gray-100 dark:meta-bg-gray-800 meta-block meta-text-xs meta-overflow-x-auto meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-whitespace-pre">
-          {JSON.stringify(result, null, 2)}
+          {(() => {
+            const resultStr = JSON.stringify(result, null, 2);
+            const truncated = resultStr.length > 1000;
+            return truncated ? `${resultStr.slice(0, 1000)}... (truncated)` : resultStr;
+          })()}
         </code>
       )}
     </details>
   );
 };
 
-export const ResponseArea: React.FC<ResponseAreaProps> = ({
-  responseChunks,
-  isLoading,
-  component,
-}) => {
+export const ResponseArea: React.FC<ResponseAreaProps> = ({ responseChunks, isLoading }) => {
   const app = useApp();
   const responseRef = useRef<HTMLDivElement>(null);
 
