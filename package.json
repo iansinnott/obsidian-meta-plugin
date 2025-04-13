@@ -14,6 +14,8 @@
 	"devDependencies": {
 		"@types/bun": "^1.2.9",
 		"@types/node": "^16.11.6",
+		"@types/react": "^19.1.1",
+		"@types/react-dom": "^19.1.2",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
 		"builtin-modules": "3.3.0",
@@ -29,6 +31,8 @@
 		"@mastra/core": "0.8.3-alpha.3",
 		"ai": "^4.3.5",
 		"openai": "^4.93.0",
+		"react": "^19.1.0",
+		"react-dom": "^19.1.0",
 		"zod": "^3.24.2"
 	}
 }
