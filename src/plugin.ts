@@ -5,29 +5,17 @@ import { MetaSettingTab, DEFAULT_SETTINGS } from "./settings";
 import { SampleModal } from "./modal";
 import { createOpenAI, type OpenAIProvider } from "@ai-sdk/openai";
 import type { LanguageModelV1 } from "ai";
-import { Agent } from "./llm/agents";
+import { Agent, createTeamManagerAgent } from "./llm/agents";
 import { listFilesTool, obsidianToolContextSchema, readFilesTool } from "./llm/tools/obsidian";
 import { MetaSidebarView, META_SIDEBAR_VIEW_TYPE, activateSidebarView } from "./sidebar";
-
-const createAgent = ({ llm }: { llm: LanguageModelV1 }) => {
-  return new Agent({
-    name: "obsidian vault file manager",
-    instructions: `You help users manage the files in their Obsidian vault.`,
-    model: llm,
-    contextSchema: obsidianToolContextSchema,
-    tools: {
-      listFilesTool,
-      readFilesTool,
-    },
-  });
-};
+import { createObsidianContentAgent } from "./llm/agents";
 
 export class MetaPlugin extends Plugin {
   settings: typeof DEFAULT_SETTINGS;
   api: OpenAI;
   provider: OpenAIProvider;
   llm: LanguageModelV1;
-  agent: ReturnType<typeof createAgent>;
+  agent: ReturnType<typeof createTeamManagerAgent>;
 
   /**
    * Handle changes to the LLM configuration. Whenever the LLM settings change
@@ -50,7 +38,7 @@ export class MetaPlugin extends Plugin {
       this.llm = this.provider(this.settings.model);
     }
 
-    this.agent = createAgent({ llm: this.llm });
+    this.agent = createTeamManagerAgent({ llm: this.llm });
   }
 
   async onload() {
@@ -66,6 +54,7 @@ export class MetaPlugin extends Plugin {
       // Called when the user clicks the icon.
       activateSidebarView(this);
     });
+
     // Perform additional things with the ribbon
     ribbonIconEl.addClass("my-plugin-ribbon-class");
 

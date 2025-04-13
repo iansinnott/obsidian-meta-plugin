@@ -1,8 +1,18 @@
 import { generateText, streamText, tool, type LanguageModelV1, type ToolSet } from "ai";
-import { sonnet } from "./models";
 import { z } from "zod";
-import { listFilesTool, obsidianToolContextSchema, readFilesTool } from "./tools/obsidian";
-import type { App } from "obsidian";
+import {
+  createFileTool,
+  listFilesTool,
+  obsidianToolContextSchema,
+  readFilesTool,
+  searchFilesByNameTool,
+  searchVaultTool,
+  updateFileTool,
+} from "./tools/obsidian";
+import { createDirectReportDelegationTool } from "./tools";
+import { getCurrentDateTime } from "./tools/locale";
+
+export const DELEGATE_TO_AGENT_TOOL_NAME = "delegateToAgent";
 
 interface AgentArgs<TTools extends ToolSet, TSchema extends z.ZodTypeAny = z.ZodObject<{}>> {
   name: string;
@@ -85,3 +95,54 @@ export class Agent<
     });
   }
 }
+
+/**
+ * Create an agent that can help users manage the content files in their Obsidian vault.
+ * @param llm - The language model to use. This is runtime-configurable so it must be taken as an arg
+ * @returns An agent that can help users manage the content files in their Obsidian vault.
+ */
+export const createObsidianContentAgent = ({ llm }: { llm: LanguageModelV1 }) => {
+  return new Agent({
+    name: "obsidian vault content manager",
+    instructions: `You're part of a team that manages, maintains and enhances a
+    user's Obsidian vault. 
+    Your specialty is managing the content files in the
+    Obsidian vault. These are usually markdown or plain text files, but Obsidian
+    supports a broad range of content.`,
+    model: llm,
+    contextSchema: obsidianToolContextSchema,
+    tools: {
+      listFilesTool,
+      readFilesTool,
+      createFileTool,
+      updateFileTool,
+      searchFilesByNameTool,
+      searchVaultTool,
+    },
+  });
+};
+
+export const createTeamManagerAgent = ({ llm }: { llm: LanguageModelV1 }) => {
+  const agents = [createObsidianContentAgent({ llm })];
+  return new Agent({
+    name: "team manager",
+    instructions: `You manage a team of Obsidian experts that can help the user with all sorts of tasks.
+
+Your team includes:
+
+${agents
+  .map((agent) => {
+    return `- \`${agent.name}\`\n  This agent is instructed to: """${agent.instructions}"""`;
+  })
+  .join("\n")}
+
+You can delegate tasks to these team members using the delegateToAgent tool.`,
+    model: llm,
+    contextSchema: obsidianToolContextSchema,
+    tools: {
+      // @ts-ignore for now
+      [DELEGATE_TO_AGENT_TOOL_NAME]: createDirectReportDelegationTool(agents),
+      getCurrentDateTime,
+    },
+  });
+};
