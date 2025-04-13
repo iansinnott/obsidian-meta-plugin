@@ -82,6 +82,14 @@ export class MetaSettingTab extends PluginSettingTab {
       });
     });
 
+    presetButtonSetting.addButton((button) => {
+      return button.setButtonText("Claude").onClick(async () => {
+        this.plugin.settings.baseUrl = "https://api.anthropic.com/v1";
+        await this.plugin.saveSettings();
+        this.display(); // Refresh the display to update the text field
+      });
+    });
+
     // Add Model Selection Dropdown and Refresh Button
     new Setting(containerEl).setName("Model").setDesc("Select the model to use for generation.");
 

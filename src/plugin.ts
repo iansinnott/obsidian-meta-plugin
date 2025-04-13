@@ -9,11 +9,16 @@ import { Agent, createTeamManagerAgent } from "./llm/agents";
 import { listFilesTool, obsidianToolContextSchema, readFilesTool } from "./llm/tools/obsidian";
 import { MetaSidebarView, META_SIDEBAR_VIEW_TYPE, activateSidebarView } from "./sidebar";
 import { createObsidianContentAgent } from "./llm/agents";
+import { anthropic, createAnthropic, type AnthropicProvider } from "@ai-sdk/anthropic";
 
 export class MetaPlugin extends Plugin {
   settings: typeof DEFAULT_SETTINGS;
-  api: OpenAI;
-  provider: OpenAIProvider;
+  api: {
+    models: {
+      list: () => Promise<{ data: { id: string }[] }>;
+    };
+  };
+  provider: OpenAIProvider | AnthropicProvider;
   llm: LanguageModelV1;
   agent: ReturnType<typeof createTeamManagerAgent>;
 
@@ -22,17 +27,51 @@ export class MetaPlugin extends Plugin {
    * we need to re-instantiate a few things with the updated information.
    */
   handleApiSettingsUpdate() {
-    // No sonnet for now, sorry sonnet
-    this.api = new OpenAI({
-      apiKey: this.settings.apiKey,
-      baseURL: this.settings.baseUrl,
-      dangerouslyAllowBrowser: true,
-    });
+    // If we're using Anthropic, we need a different way to fetch models since
+    // ai sdk doesn't provide that. Otherwise, everything should be the same.
+    const isAnthropic = () => this.settings.baseUrl.includes("api.anthropic.com");
 
-    this.provider = createOpenAI({
-      apiKey: this.settings.apiKey,
-      baseURL: this.settings.baseUrl,
-    });
+    this.api = {
+      models: {
+        list: async () => {
+          const response = await fetch(`${this.settings.baseUrl}/models`, {
+            headers: {
+              "Content-Type": "application/json",
+              ...(isAnthropic()
+                ? {
+                    "anthropic-version": "2023-06-01",
+                    "x-api-key": this.settings.apiKey,
+                    "anthropic-dangerous-direct-browser-access": "true",
+                  }
+                : {
+                    Authorization: `Bearer ${this.settings.apiKey}`,
+                  }),
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to fetch models: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+
+          return { data: data.data };
+        },
+      },
+    };
+
+    this.provider = isAnthropic()
+      ? createAnthropic({
+          apiKey: this.settings.apiKey,
+          baseURL: this.settings.baseUrl,
+          headers: {
+            "anthropic-dangerous-direct-browser-access": "true",
+          },
+        })
+      : createOpenAI({
+          apiKey: this.settings.apiKey,
+          baseURL: this.settings.baseUrl,
+        });
 
     if (this.settings.model && this.llm?.modelId !== this.settings.model) {
       this.llm = this.provider(this.settings.model);
