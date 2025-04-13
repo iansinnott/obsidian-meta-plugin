@@ -7,6 +7,7 @@ import { createOpenAI, type OpenAIProvider } from "@ai-sdk/openai";
 import type { LanguageModelV1 } from "ai";
 import { Agent } from "./llm/agents";
 import { listFilesTool, obsidianToolContextSchema, readFilesTool } from "./llm/tools/obsidian";
+import { MetaSidebarView, META_SIDEBAR_VIEW_TYPE, activateView } from "./sidebar";
 
 const createAgent = ({ llm }: { llm: LanguageModelV1 }) => {
   return new Agent({
@@ -56,6 +57,12 @@ export class MetaPlugin extends Plugin {
     await this.loadSettings();
 
     this.handleApiSettingsUpdate();
+    
+    // Register the sidebar view
+    this.registerView(
+      META_SIDEBAR_VIEW_TYPE,
+      (leaf) => new MetaSidebarView(leaf, this)
+    );
 
     // This creates an icon in the left ribbon.
     const ribbonIconEl = this.addRibbonIcon("brain", "Obsidian Meta Plugin", (evt: MouseEvent) => {
@@ -110,6 +117,15 @@ export class MetaPlugin extends Plugin {
 
     // This adds a settings tab so the user can configure various aspects of the plugin
     this.addSettingTab(settingsTab);
+    
+    // Add command to open the sidebar view
+    this.addCommand({
+      id: "open-meta-sidebar",
+      name: "Open Meta Sidebar",
+      callback: async () => {
+        await activateView(this);
+      },
+    });
 
     // If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
     // Using this function will automatically remove the event listener when this plugin is disabled.
@@ -121,7 +137,10 @@ export class MetaPlugin extends Plugin {
     this.registerInterval(window.setInterval(() => console.log("setInterval"), 5 * 60 * 1000));
   }
 
-  onunload() {}
+  onunload() {
+    // Detach any leaves with our view type
+    this.app.workspace.detachLeavesOfType(META_SIDEBAR_VIEW_TYPE);
+  }
 
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
