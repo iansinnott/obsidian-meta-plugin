@@ -1,0 +1,13 @@
+/* Only import components and utilities, skip base/reset */
+@tailwind components;
+@tailwind utilities;
+
+/* Scope plugin styles to our container */
+.meta-plugin-container {
+  /* This ensures all our styles stay inside our container */
+  all: initial;
+  font-family: var(--font-text);
+  color: var(--text-normal);
+}
+
+/* Custom styles can go here */

@@ -80,7 +80,7 @@ export class MetaSidebarView extends ItemView {
 }
 
 // Helper function to activate the sidebar view
-export async function activateView(plugin: IMetaPlugin): Promise<void> {
+export async function activateSidebarView(plugin: IMetaPlugin): Promise<void> {
   const { workspace } = plugin.app;
 
   // Detach existing leaves with our view type

@@ -58,9 +58,11 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
   };
 
   return (
-    <div className="meta-sidebar-container">
-      <div className="meta-sidebar-header">
-        <h2>Meta Assistant</h2>
+    <div className="meta-plugin-container meta-flex meta-flex-col meta-h-full">
+      <div className="meta-border-b meta-border-gray-200 dark:meta-border-gray-700">
+        <h2 className="meta-text-xl meta-font-semibold meta-text-gray-800 dark:meta-text-gray-200">
+          Meta Assistant
+        </h2>
       </div>
 
       <PromptInput onSubmit={handleSubmit} isLoading={isLoading} />

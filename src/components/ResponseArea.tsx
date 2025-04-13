@@ -18,18 +18,17 @@ interface ToolCallProps {
 
 const ToolCall: React.FC<ToolCallProps> = ({ id, toolName, args, result }) => {
   return (
-    <details className={id}>
-      <summary>
+    <details
+      className={`meta-mb-4 meta-rounded-md meta-border meta-border-gray-200 dark:meta-border-gray-700 ${id}`}
+    >
+      <summary className="meta-p-2 meta-cursor-pointer hover:meta-bg-gray-100 dark:hover:meta-bg-gray-800 meta-font-medium">
         {result ? "✅" : "🤔"} {toolName}
       </summary>
-      <code style={{ whiteSpace: "pre-wrap", display: "block" }}>
+      <code className="meta-p-3 meta-bg-gray-50 dark:meta-bg-gray-900 meta-block meta-rounded-b-md meta-overflow-x-auto">
         {JSON.stringify(args, null, 2)}
       </code>
       {result && (
-        <code
-          className="tool-response"
-          style={{ whiteSpace: "pre-wrap", fontSize: "x-small", display: "block" }}
-        >
+        <code className="meta-p-3 meta-bg-gray-100 dark:meta-bg-gray-850 meta-block meta-text-xs meta-overflow-x-auto meta-border-t meta-border-gray-200 dark:meta-border-gray-700">
           {JSON.stringify(result, null, 2)}
         </code>
       )}
@@ -84,20 +83,26 @@ export const ResponseArea: React.FC<ResponseAreaProps> = ({
 
   if (isLoading && responseChunks.length === 0) {
     return (
-      <div className="meta-sidebar-response">
-        <div className="meta-sidebar-loading">Processing...</div>
+      <div className="meta-flex-1 meta-p-4 meta-overflow-y-auto">
+        <div className="meta-text-center meta-py-12 meta-text-gray-500 dark:meta-text-gray-400">
+          Processing...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="meta-sidebar-response" ref={responseRef}>
+    <div className="meta-flex-1 meta-p-4 meta-overflow-y-auto" ref={responseRef}>
       {Object.entries(toolCalls).map(([id, props]) => (
         <ToolCall key={id} {...props} />
       ))}
 
       {Object.keys(textResults).map((id) => (
-        <div key={id} className="meta-sidebar-result" data-result-id={id} />
+        <div
+          key={id}
+          className="meta-prose dark:meta-prose-invert meta-max-w-none"
+          data-result-id={id}
+        />
       ))}
     </div>
   );
