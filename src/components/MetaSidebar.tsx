@@ -60,14 +60,18 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
   return (
     <div className="meta-plugin-container meta-flex meta-flex-col meta-h-full">
       <div className="meta-border-b meta-border-gray-200 dark:meta-border-gray-700">
-        <h2 className="meta-text-xl meta-font-semibold meta-text-gray-800 dark:meta-text-gray-200">
+        <p className="meta-text-xl meta-font-semibold meta-text-gray-800 dark:meta-text-gray-200 meta-mt-0">
           Meta Assistant
-        </h2>
+        </p>
       </div>
 
-      <PromptInput onSubmit={handleSubmit} isLoading={isLoading} />
+      <div className="meta-flex-1 meta-overflow-hidden meta-flex meta-flex-col">
+        <ResponseArea responseChunks={responseChunks} isLoading={isLoading} component={component} />
+      </div>
 
-      <ResponseArea responseChunks={responseChunks} isLoading={isLoading} component={component} />
+      <div className="meta-mt-auto meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-shrink-0">
+        <PromptInput onSubmit={handleSubmit} isLoading={isLoading} />
+      </div>
     </div>
   );
 };
