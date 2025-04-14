@@ -22,6 +22,7 @@ export const createDirectReportDelegationTool = (agents: Agent[]) =>
           maxSteps: 10,
           maxRetries: 2,
           maxTokens: 8000,
+          experimental_continueSteps: true,
           onStepFinish: (step) => {
             console.log(`[${agent.name}] step:`, step);
           },
