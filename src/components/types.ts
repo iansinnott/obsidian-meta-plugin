@@ -18,10 +18,3 @@ export type ToolResultChunk = {
 };
 
 export type ResponseChunk = TextDeltaChunk | ToolCallChunk | ToolResultChunk;
-
-export type StreamProps = {
-  prompt: string;
-  maxSteps: number;
-  maxRetries: number;
-  maxTokens: number;
-};
