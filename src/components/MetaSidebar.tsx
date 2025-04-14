@@ -2,10 +2,11 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Component } from "obsidian";
 import { PromptInput } from "./PromptInput";
 import { ResponseArea } from "./ResponseArea";
-import { useApp } from "./useApp";
+import { useApp } from "../hooks/useApp";
 import type { ResponseChunk } from "./types";
 import type { MetaPlugin as IMetaPlugin } from "../plugin";
-import { ChunkProcessor, type Message } from "../llm/chunk-processor";
+import { type Message } from "../llm/chunk-processor";
+import { useChunkedMessages } from "../hooks/useChunkedMessages";
 
 interface MetaSidebarProps {
   plugin: IMetaPlugin;
@@ -20,49 +21,11 @@ export interface ToolCall {
   result?: any;
 }
 
-const useChunkedMessages = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const processor = useRef(new ChunkProcessor());
-
-  const update = useCallback(() => {
-    setMessages(processor.current.getMessages());
-  }, []);
-
-  const reset = useCallback(() => {
-    processor.current.reset();
-    update();
-  }, [update]);
-
-  return {
-    appendMessage: (message: Message) => {
-      processor.current.appendMessage(message);
-      update();
-    },
-    appendResponseChunk: (chunk: ResponseChunk) => {
-      processor.current.appendChunk(chunk);
-      update();
-    },
-    messages,
-    reset,
-    getMessages: () => {
-      return processor.current.getMessages();
-    },
-  };
-};
-
 export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) => {
   const app = useApp();
   const [isLoading, setIsLoading] = useState(false);
-  const [responseChunks, setResponseChunks] = useState<ResponseChunk[]>([]);
-  const { messages, appendMessage, appendResponseChunk, reset, getMessages } = useChunkedMessages();
-
-  useEffect(() => {
-    console.log("messages", messages);
-  }, [messages]);
-
-  useEffect(() => {
-    console.log("chunks", responseChunks);
-  }, [responseChunks]);
+  const { messages, chunks, appendMessage, appendResponseChunk, reset, getMessages, getChunks } =
+    useChunkedMessages();
 
   const handleSubmit = useCallback(
     async (prompt: string) => {
@@ -76,7 +39,6 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
 
       appendMessage(userMessage);
       setIsLoading(true);
-      setResponseChunks([]);
 
       try {
         if (plugin.agent) {
@@ -93,27 +55,26 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
           );
 
           // @todo remove. dev - want to see what the same requests gives us when done without streaming
-          plugin.agent
-            .generateText(
-              {
-                // @ts-expect-error - some deeply nested thing
-                messages: getMessages(),
-                maxSteps: 10,
-                maxRetries: 2,
-                maxTokens: 8000,
-                temperature: 0,
-              },
-              { app }
-            )
-            .then((response) => {
-              console.log("dev gen response", response);
-            })
-            .catch((err) => {
-              console.error("Error with dev gen call:", err);
-            });
+          // plugin.agent
+          //   .generateText(
+          //     {
+          //       // @ts-expect-error - some deeply nested thing
+          //       messages: getMessages(),
+          //       maxSteps: 10,
+          //       maxRetries: 2,
+          //       maxTokens: 8000,
+          //       temperature: 0,
+          //     },
+          //     { app }
+          //   )
+          //   .then((response) => {
+          //     console.log("dev gen response", response);
+          //   })
+          //   .catch((err) => {
+          //     console.error("Error with dev gen call:", err);
+          //   });
 
           for await (const chunk of stream.fullStream) {
-            setResponseChunks((prev) => [...prev, chunk as ResponseChunk]);
             appendResponseChunk(chunk as ResponseChunk);
           }
 
@@ -140,7 +101,7 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
         setIsLoading(false);
       }
     },
-    [plugin, app, appendMessage, getMessages, appendResponseChunk]
+    [plugin, app, appendMessage, getMessages, getChunks, appendResponseChunk]
   );
 
   return (
@@ -159,9 +120,9 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
 
       <div className="meta-flex-1 meta-overflow-hidden meta-flex meta-flex-col">
         <ResponseArea
-          responseChunks={responseChunks}
           isLoading={isLoading}
           messages={messages} // Pass the conversation to display message history
+          chunks={chunks}
         />
       </div>
 

@@ -40,12 +40,14 @@ export class ChunkProcessor {
   private messages: Message[] = [];
   private currentMessage: Message | null = null;
   private currentTextDelta = "";
+  private currentMessageIndex: number = -1;
 
   reset() {
     this.chunks = [];
     this.messages = [];
     this.currentMessage = null;
     this.currentTextDelta = "";
+    this.currentMessageIndex = -1;
   }
 
   appendChunk(chunk: any) {
@@ -86,10 +88,14 @@ export class ChunkProcessor {
       id: messageId,
     };
     this.currentTextDelta = "";
+
+    // Add the message to the array immediately
+    this.messages.push(this.currentMessage);
+    this.currentMessageIndex = this.messages.length - 1;
   }
 
   private appendTextDelta(textDelta: string) {
-    if (!this.currentMessage) {
+    if (!this.currentMessage || this.currentMessageIndex === -1) {
       return;
     }
 
@@ -106,10 +112,13 @@ export class ChunkProcessor {
         text: this.currentTextDelta,
       });
     }
+
+    // Ensure changes are reflected in the messages array
+    this.messages[this.currentMessageIndex] = this.currentMessage;
   }
 
   private addToolCall(chunk: any) {
-    if (!this.currentMessage) {
+    if (!this.currentMessage || this.currentMessageIndex === -1) {
       return;
     }
 
@@ -121,6 +130,9 @@ export class ChunkProcessor {
     };
 
     this.currentMessage.content.push(toolCallPart);
+
+    // Ensure changes are reflected in the messages array
+    this.messages[this.currentMessageIndex] = this.currentMessage;
   }
 
   private addToolResult(chunk: any) {
@@ -145,15 +157,20 @@ export class ChunkProcessor {
   }
 
   private finalizeCurrentMessage() {
-    if (this.currentMessage && this.currentMessage.content.length > 0) {
-      this.messages.push(this.currentMessage);
+    if (this.currentMessage) {
+      // The message is already in the messages array, just reset the current state
       this.currentMessage = null;
       this.currentTextDelta = "";
+      this.currentMessageIndex = -1;
     }
   }
 
   getMessages(): Message[] {
     return this.messages;
+  }
+
+  getChunks(): any[] {
+    return this.chunks;
   }
 
   /**

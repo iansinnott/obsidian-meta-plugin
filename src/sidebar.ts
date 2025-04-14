@@ -3,7 +3,7 @@ import type { MetaPlugin as IMetaPlugin } from "./plugin";
 import * as React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MetaSidebar } from "./components/MetaSidebar";
-import { AppProvider } from "./components/useApp";
+import { AppProvider } from "./hooks/useApp";
 import "./components/metaSidebar.css";
 
 // Define a unique view type for the sidebar

@@ -1,20 +1,23 @@
 import React, { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { useApp } from "./useApp";
-import type { ResponseChunk } from "./types";
 import { ShimmerText } from "./ShimmerText";
 import { DELEGATE_TO_AGENT_TOOL_NAME } from "../llm/agents";
 import { type Message } from "../llm/chunk-processor";
 import type { ToolCall } from "./MetaSidebar";
+import { useToolResult } from "../hooks/useChunkedMessages";
 
 interface ResponseAreaProps {
-  responseChunks: ResponseChunk[];
+  chunks: any[];
   isLoading: boolean;
   messages?: Message[]; // Conversation history
 }
 
-const ToolCallView: React.FC<ToolCall> = ({ toolCallId, toolName, args, result }) => {
+const ToolCallView: React.FC<ToolCall> = ({ toolCallId, toolName, args }) => {
   const _name = toolName === DELEGATE_TO_AGENT_TOOL_NAME ? args.agentId : toolName;
+  const result = useToolResult(toolCallId);
+
+  console.log("tool call result", toolCallId, result);
+
   return (
     <details
       data-id={toolCallId}
@@ -96,9 +99,9 @@ const MessageBubble: React.FC<{ message: Message; isLoading: boolean }> = ({
 };
 
 export const ResponseArea: React.FC<ResponseAreaProps> = ({
-  responseChunks,
   isLoading,
   messages = [],
+  chunks = [],
 }) => {
   const responseRef = useRef<HTMLDivElement>(null);
 
@@ -107,10 +110,10 @@ export const ResponseArea: React.FC<ResponseAreaProps> = ({
     if (responseRef.current) {
       responseRef.current.scrollTop = responseRef.current.scrollHeight;
     }
-  }, [responseChunks, messages]);
+  }, [chunks, messages]);
 
   // Initial loading state with no messages
-  if (isLoading && responseChunks.length === 0 && messages.length === 0) {
+  if (isLoading && chunks.length === 0 && messages.length === 0) {
     return (
       <div className="meta-flex-1 meta-overflow-y-auto meta-w-full meta-h-full meta-p-4">
         <div className="meta-text-center meta-py-2 meta-font-medium">
@@ -125,10 +128,16 @@ export const ResponseArea: React.FC<ResponseAreaProps> = ({
       className="meta-flex-1 meta-overflow-y-auto meta-w-full meta-h-full meta-p-4"
       ref={responseRef}
     >
-      {/* Display all messages including streaming messages */}
-      {messages.map((message, index) => (
-        <MessageBubble key={message.id || `msg-${index}`} message={message} isLoading={isLoading} />
-      ))}
+      {/* NOTE: "tool" messages are not displayed. instead the tool-call is displayed and we tack the result onto the call site when complete */}
+      {messages
+        .filter((m) => m.role !== "tool")
+        .map((message, index) => (
+          <MessageBubble
+            key={message.id || `msg-${index}`}
+            message={message}
+            isLoading={isLoading}
+          />
+        ))}
     </div>
   );
 };
