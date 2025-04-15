@@ -73,7 +73,14 @@ export class MetaPlugin extends Plugin {
       this.llm = this.provider(this.settings.model);
     }
 
-    this.agent = createTeamManagerAgent({ llm: this.llm });
+    this.agent = createTeamManagerAgent({
+      llm: this.llm,
+      settings: {
+        maxSteps: 20,
+        maxRetries: 2,
+        maxTokens: 8000,
+      },
+    });
   }
 
   async onload() {

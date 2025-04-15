@@ -29,6 +29,11 @@ interface AgentArgs<
   tools?: TTools;
   contextSchema?: TSchema;
   agents?: TSubAgent[];
+  settings?: {
+    maxSteps?: number;
+    maxRetries?: number;
+    maxTokens?: number;
+  };
   onSubAgentChunk?: (arg: {
     agentId: string;
     toolCallId: string;
@@ -58,6 +63,11 @@ export class Agent<
   readonly tools: TTools;
   readonly contextSchema?: TSchema;
   readonly agents?: TSubAgent[];
+  readonly settings: {
+    maxSteps?: number;
+    maxRetries?: number;
+    maxTokens?: number;
+  };
 
   constructor(args: AgentArgs<TTools, TSchema, TSubAgent>) {
     this.name = args.name;
@@ -66,6 +76,11 @@ export class Agent<
     this.contextSchema = args.contextSchema;
     this.agents = args.agents;
     this.tools = args.tools || ({} as TTools);
+    this.settings = args.settings || {
+      maxSteps: 20,
+      maxRetries: 2,
+      maxTokens: 8000,
+    };
 
     // Add the delegation tool if there are agents
     if (this.agents) {
@@ -124,12 +139,20 @@ export class Agent<
   }
 }
 
+type AgentSettings = AgentArgs<{}, any, any>["settings"];
+
 /**
  * Create an agent that can help users manage the content files in their Obsidian vault.
  * @param llm - The language model to use. This is runtime-configurable so it must be taken as an arg
  * @returns An agent that can help users manage the content files in their Obsidian vault.
  */
-export const createObsidianContentAgent = ({ llm }: { llm: LanguageModelV1 }) => {
+export const createObsidianContentAgent = ({
+  llm,
+  settings,
+}: {
+  llm: LanguageModelV1;
+  settings?: AgentSettings;
+}) => {
   return new Agent({
     name: "obsidian vault content manager",
     instructions: `You're part of a team that manages, maintains and enhances a
@@ -142,6 +165,7 @@ export const createObsidianContentAgent = ({ llm }: { llm: LanguageModelV1 }) =>
     content created directly by the user.`,
     model: llm,
     contextSchema: obsidianToolContextSchema,
+    settings,
     tools: {
       listFilesTool,
       readFilesTool,
@@ -154,24 +178,38 @@ export const createObsidianContentAgent = ({ llm }: { llm: LanguageModelV1 }) =>
   });
 };
 
-export const createObsidianAPIAgent = ({ llm }: { llm: LanguageModelV1 }) => {
+export const createObsidianAPIAgent = ({
+  llm,
+  settings,
+}: {
+  llm: LanguageModelV1;
+  settings?: AgentSettings;
+}) => {
   return new Agent({
     name: "obsidian plugin API",
     instructions: `You are an AI agent that has direct access to the Obsidian API. Your tools give you full reign over the user's Obsidian vault.`,
     model: llm,
     contextSchema: obsidianToolContextSchema,
+    settings,
     tools: {
       obsidianAPITool,
     },
   });
 };
 
-export const createObsidianThemesAgent = ({ llm }: { llm: LanguageModelV1 }) => {
+export const createObsidianThemesAgent = ({
+  llm,
+  settings,
+}: {
+  llm: LanguageModelV1;
+  settings?: AgentSettings;
+}) => {
   return new Agent({
     name: "obsidian theme manager",
     instructions: `You are an AI agent that specializes in themeing Obsidian and managing the user's exisdting themes.`,
     model: llm,
     contextSchema: obsidianToolContextSchema,
+    settings,
     tools: {
       getCurrentTheme: getCurrentThemeTool,
       listAvaialbleThemes: listAvailableThemesTool,
@@ -180,11 +218,17 @@ export const createObsidianThemesAgent = ({ llm }: { llm: LanguageModelV1 }) => 
   });
 };
 
-export const createTeamManagerAgent = ({ llm }: { llm: LanguageModelV1 }) => {
+export const createTeamManagerAgent = ({
+  llm,
+  settings,
+}: {
+  llm: LanguageModelV1;
+  settings?: AgentSettings;
+}) => {
   // prettier-ignore
   const agents = [
-    createObsidianContentAgent({ llm }), 
-    createObsidianThemesAgent({ llm }),
+    createObsidianContentAgent({ llm, settings }),
+    createObsidianThemesAgent({ llm, settings }),
     // createObsidianAPIAgent({ llm }),
   ];
 

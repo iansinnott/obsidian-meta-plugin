@@ -47,10 +47,10 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
             {
               // @ts-expect-error - some deeply nested thing
               messages: getMessages(),
-              maxSteps: 10,
-              maxRetries: 2,
-              maxTokens: 8000,
-              temperature: 0,
+              maxSteps: plugin.agent.settings.maxSteps || 10,
+              maxRetries: plugin.agent.settings.maxRetries || 2,
+              maxTokens: plugin.agent.settings.maxTokens || 8000,
+              temperature: 0.2,
             },
             ctx
           );

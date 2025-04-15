@@ -189,7 +189,10 @@ const MessageBubble: React.FC<{
         ) : (
           <>
             {/* Render message content */}
-            {message.content && (
+            {message.content
+              ?.filter((c) => c.type === "text")
+              .map((c) => c.text)
+              .join("") && (
               <div className="meta-prose meta-prose-sm dark:meta-prose-invert meta-max-w-none meta-bg-gray-200 dark:meta-bg-gray-700 meta-p-3 meta-rounded-lg meta-overflow-auto">
                 <ReactMarkdown>
                   {message.content

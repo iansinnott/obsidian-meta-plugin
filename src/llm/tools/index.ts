@@ -34,9 +34,9 @@ export const createDirectReportDelegationTool = <TContext>(
       const subAgentStream = agent.streamText(
         {
           prompt,
-          maxSteps: 10,
-          maxRetries: 2,
-          maxTokens: 8000,
+          maxSteps: agent.settings.maxSteps || 10,
+          maxRetries: agent.settings.maxRetries || 2,
+          maxTokens: agent.settings.maxTokens || 8000,
           experimental_continueSteps: true,
         },
         options.context as any
