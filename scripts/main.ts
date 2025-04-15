@@ -5,6 +5,7 @@ import { fmt, omit } from "@/src/llm/utils";
 import { weatherTool } from "@/src/llm/tools/weather";
 import { Agent } from "@/src/llm/agents";
 import { z } from "zod";
+import type { AnthropicProviderOptions } from "@ai-sdk/anthropic";
 
 const getCLIContext = async (baseCtx: BaseCLIContext) => {
   return {
@@ -226,6 +227,22 @@ const commands: CLICommandSPec<CLIContext> = {
       } finally {
         clearInterval(interval);
       }
+    },
+  },
+
+  "dev:provider-options": {
+    description: "print the provider options",
+    exec: async (ctx) => {
+      const result = await generateText({
+        model: sonnet,
+        prompt: "What's the weather like in San Francisco?",
+        providerOptions: {
+          anthropic: {
+            thinking: { type: "enabled", budgetTokens: 1000 },
+          } satisfies AnthropicProviderOptions,
+        },
+      });
+      console.log(result.text);
     },
   },
 
