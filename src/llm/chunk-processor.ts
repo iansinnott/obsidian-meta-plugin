@@ -75,6 +75,9 @@ export class ChunkProcessor {
       case "finish":
         // Nothing to do on final finish
         break;
+      default:
+        console.log(`[ChunkProcessor] unknown chunk type:`, chunk);
+        break;
     }
   }
 
