@@ -1,9 +1,12 @@
+import type { MetaPlugin } from "@/src/plugin";
 import { tool, type ToolExecutionOptions } from "ai";
 import type { App } from "obsidian";
+import path from "path";
 import { z } from "zod";
 
 export const obsidianToolContextSchema = z.object({
   app: z.custom<App>(),
+  plugin: z.custom<MetaPlugin>(),
 });
 
 type ObsidianContext = z.infer<typeof obsidianToolContextSchema>;
@@ -315,6 +318,83 @@ export const obsidianAPITool = tool({
       return {
         success: false,
         message: `Error executing function: ${error.message || error}`,
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        },
+      };
+    }
+  },
+});
+
+export const getCurrentThemeTool = tool({
+  description: "Get the currently active Obsidian theme.",
+  parameters: z.object({}),
+  execute: async (_, options: ToolExecutionOptions & { context: ObsidianContext }) => {
+    const { app } = options.context;
+
+    try {
+      // Use our augmented types instead of type assertions
+      const activeTheme = app.vault.config.cssTheme;
+
+      return {
+        success: true,
+        theme: {
+          activeTheme,
+          cssClasses: Array.from(document.body.classList).join(" "),
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to get current theme: ${error.message || error}`,
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        },
+      };
+    }
+  },
+});
+
+export const listAvailableThemesTool = tool({
+  description: "List all available themes that the user can choose from in Obsidian.",
+  parameters: z.object({}),
+  execute: async (_, options: ToolExecutionOptions & { context: ObsidianContext }) => {
+    const { plugin } = options.context;
+    const app = plugin.app;
+    const vault = app.vault;
+    const adapter = vault.adapter;
+
+    try {
+      const { folders } = await adapter.list(vault.configDir);
+      const themeDir = folders.find((x) => x.includes("themes"));
+      if (!themeDir) {
+        throw new Error("No themes directory found");
+      }
+
+      const { folders: themeFolders } = await adapter.list(themeDir);
+      const themes = await Promise.all(
+        themeFolders.map(async (themeFolder) => {
+          const manifest = JSON.parse(await adapter.read(path.join(themeFolder, "manifest.json")));
+          return {
+            manifest,
+            path: themeFolder,
+            isActive: vault.config.cssTheme === manifest.name,
+          };
+        })
+      );
+
+      return {
+        success: true,
+        themes,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to list available themes: ${error.message || error}`,
         error: {
           name: error.name,
           message: error.message,
