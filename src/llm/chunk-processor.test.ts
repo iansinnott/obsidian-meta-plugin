@@ -1,6 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { ChunkProcessor } from "./chunk-processor";
 import { generateId } from "ai";
+import { findToolResult, findToolError } from "../hooks/useChunkedMessages";
 
 const chunks_sonnetTools1 = {
   inputChunks: [
@@ -364,6 +365,118 @@ const chunks_sonnetPartialText1 = {
   ],
 };
 
+const chunks_error1 = {
+  inputChunks: [
+    {
+      type: "step-start",
+      messageId: "msg-SvcHq4X0Fr31GawwrwowHvgV",
+      warnings: [],
+    },
+    {
+      type: "text-delta",
+      textDelta: "I",
+    },
+    {
+      type: "text-delta",
+      textDelta: "'ll help you check what themes are installed in",
+    },
+    {
+      type: "text-delta",
+      textDelta: " your Obsidian vault. Let me delegate",
+    },
+    {
+      type: "text-delta",
+      textDelta: " this task to the Obsidian plugin",
+    },
+    {
+      type: "text-delta",
+      textDelta: " API expert who can access this information for you.",
+    },
+    {
+      type: "tool-call",
+      toolCallId: "toolu_01LnLW47grQEVTVKcfvW6UFG",
+      toolName: "delegateToAgent",
+      args: {
+        agentId: "obsidian plugin API",
+        prompt:
+          "Please check what themes are currently installed in the user's Obsidian vault and provide a list of them.",
+      },
+    },
+    {
+      type: "error",
+      error: {
+        name: "AI_ToolExecutionError",
+        cause: {
+          stack:
+            "Error: Failed to execute 'structuredClone' on 'Window': #<Promise> could not be cloned.\n    at fn (plugin:obsidian-meta-plugin:33103:23)\n    at async eval (plugin:obsidian-meta-plugin:31132:22)\n    at async execute (plugin:obsidian-meta-plugin:35449:22)\n    at async eval (plugin:obsidian-meta-plugin:31132:22)",
+        },
+        toolArgs: {
+          agentId: "obsidian plugin API",
+          prompt:
+            "Please check what themes are currently installed in the user's Obsidian vault and provide a list of them.",
+        },
+        toolName: "delegateToAgent",
+        toolCallId: "toolu_01LnLW47grQEVTVKcfvW6UFG",
+      },
+    },
+    {
+      type: "step-finish",
+      finishReason: "tool-calls",
+      usage: {
+        promptTokens: 845,
+        completionTokens: 138,
+        totalTokens: 983,
+      },
+      providerMetadata: {
+        anthropic: {
+          cacheCreationInputTokens: 0,
+          cacheReadInputTokens: 0,
+        },
+      },
+      experimental_providerMetadata: {
+        anthropic: {
+          cacheCreationInputTokens: 0,
+          cacheReadInputTokens: 0,
+        },
+      },
+      response: {
+        id: "msg_01QpNSWY8vEa2AWqK7UV7X1v",
+        timestamp: "2025-04-14T13:26:24.314Z",
+        modelId: "claude-3-7-sonnet-20250219",
+      },
+      warnings: [],
+      isContinued: false,
+      messageId: "msg-SvcHq4X0Fr31GawwrwowHvgV",
+    },
+    {
+      type: "finish",
+      finishReason: "tool-calls",
+      usage: {
+        promptTokens: 845,
+        completionTokens: 138,
+        totalTokens: 983,
+      },
+      providerMetadata: {
+        anthropic: {
+          cacheCreationInputTokens: 0,
+          cacheReadInputTokens: 0,
+        },
+      },
+      experimental_providerMetadata: {
+        anthropic: {
+          cacheCreationInputTokens: 0,
+          cacheReadInputTokens: 0,
+        },
+      },
+      response: {
+        id: "msg_01QpNSWY8vEa2AWqK7UV7X1v",
+        timestamp: "2025-04-14T13:26:24.314Z",
+        modelId: "claude-3-7-sonnet-20250219",
+      },
+    },
+  ],
+};
+
 describe("ChunkProcessor", () => {
   test("should process chunks into structured messages", () => {
     const tt = [chunks_sonnetTools1, chunks_optimusTools1, chunks_sonnetPartialText1];
@@ -378,5 +491,27 @@ describe("ChunkProcessor", () => {
       // @ts-ignore
       expect(result).toEqual(expectedOutput);
     }
+  });
+
+  test("should find tool errors and results correctly", () => {
+    const chunkProcessor = new ChunkProcessor();
+
+    // Add all chunks from the error example
+    for (const chunk of chunks_error1.inputChunks) {
+      chunkProcessor.appendChunk(chunk);
+    }
+
+    const allChunks = chunkProcessor.getChunks();
+    const toolCallId = "toolu_01LnLW47grQEVTVKcfvW6UFG";
+
+    // Test error finding
+    const error = findToolError(allChunks, toolCallId);
+    expect(error).not.toBeNull();
+    expect(error?.type).toBe("error");
+    expect(error?.error.toolCallId).toBe(toolCallId);
+
+    // Test result should be null for this case
+    const result = findToolResult(allChunks, toolCallId);
+    expect(result).toBeNull();
   });
 });

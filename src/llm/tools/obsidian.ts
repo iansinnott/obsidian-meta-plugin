@@ -265,3 +265,62 @@ export const updateFileTool = tool({
     }
   },
 });
+
+/**
+ * NOTE: I created this to allow the AI to request functionality i've not yet
+ * implemented, and then implement standalone tools as needed. That being said,
+ * we could implement this API directly and let the AI have free reign. Seems a
+ * bit ill-advised though, especially since the user can use whatever model they
+ * like.
+ */
+export const obsidianAPITool = tool({
+  description: `
+    Use the Obsidian API directly. This is an experimental tool and should be used with caution. Only use this tool when the other Obsidian tools are insufficient.
+      
+    IMPORTANT: Be very careful when using this tool. It provides full, unrestricted access to the Obsidian API, which allows destructive actions.
+      
+    How to use:
+    - Write a function body as a string that takes the Obsidian \`app\` instance as the first argument.
+      - Example: \`"return typeof app === undefined;"\`. This will return \`false\`, since \`app\` is is the first argument and is defined.
+      - The string will be evaluated using the \`new Function\` constructor. \`new Function('app', yourCode)\`.
+      - The App object is documented here, although full documentation is not provided: https://docs.obsidian.md/Reference/TypeScript+API/App. Make use of your expertise with Obsidian plugins to utilise this API.
+    - Pass the function definition as a string to this tool.
+    - The function will be called with the Obsidian \`app\` instance as the first argument, and the return value of your function will be returned as the result of this tool.
+    - NOTE: A return value is not required. If your function has a return statement we will attempt to serialize the value using JSON.stringify.
+    - NOTE: Any error thrown by your function will be caught and returned as an error object.
+  `,
+  parameters: z.object({
+    functionBody: z
+      .string()
+      .describe(
+        "The full function, as a plain string, to be called with the Obisidan `app` instance as the first argument."
+      ),
+  }),
+  execute: async (
+    { functionBody },
+    options: ToolExecutionOptions & { context: ObsidianContext }
+  ) => {
+    const { app } = options.context;
+
+    try {
+      const fn = new Function("app", functionBody);
+      const result = fn(app);
+
+      return {
+        success: true,
+        result: result !== undefined ? result : undefined,
+        message: "Function executed successfully",
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Error executing function: ${error.message || error}`,
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        },
+      };
+    }
+  },
+});

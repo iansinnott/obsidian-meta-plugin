@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ChunkProcessor, type Message } from "../llm/chunk-processor";
-import type { ResponseChunk } from "../components/types";
+import type { ResponseChunk, ErrorChunk } from "../components/types";
 
 // Create a singleton processor instance
 const _processor = new ChunkProcessor();
@@ -21,6 +21,15 @@ export const findToolResult = (
 ): ResponseChunk | null => {
   return (
     chunks.find((chunk) => chunk.type === "tool-result" && chunk.toolCallId === toolCallId) || null
+  );
+};
+
+// Plain utility function to find a tool error
+export const findToolError = (chunks: ResponseChunk[], toolCallId: string): ErrorChunk | null => {
+  return (
+    (chunks.find(
+      (chunk) => chunk.type === "error" && chunk.error?.toolCallId === toolCallId
+    ) as ErrorChunk) || null
   );
 };
 
@@ -91,14 +100,17 @@ export const useChunkedMessages = () => {
 // Hook specifically for tool results that will react to changes
 export const useToolResult = (toolCallId: string) => {
   const [result, setResult] = useState<ResponseChunk | null>(null);
+  const [error, setError] = useState<ErrorChunk | null>(null);
 
   useEffect(() => {
     // Initial state
     setResult(findToolResult(_processor.getChunks(), toolCallId));
+    setError(findToolError(_processor.getChunks(), toolCallId));
 
     // Create subscriber function
     const updateResult = () => {
       setResult(findToolResult(_processor.getChunks(), toolCallId));
+      setError(findToolError(_processor.getChunks(), toolCallId));
     };
 
     // Add subscriber
@@ -110,5 +122,5 @@ export const useToolResult = (toolCallId: string) => {
     };
   }, [toolCallId]);
 
-  return result;
+  return { result, error, isLoading: !result && !error };
 };

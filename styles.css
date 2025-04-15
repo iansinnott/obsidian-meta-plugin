@@ -657,6 +657,9 @@
 .meta-flex {
   display: flex;
 }
+.meta-h-4 {
+  height: 1rem;
+}
 .meta-h-5 {
   height: 1.25rem;
 }
@@ -665,6 +668,9 @@
 }
 .meta-min-h-\[40px\] {
   min-height: 40px;
+}
+.meta-w-4 {
+  width: 1rem;
 }
 .meta-w-5 {
   width: 1.25rem;
@@ -698,6 +704,9 @@
 }
 .meta-justify-between {
   justify-content: space-between;
+}
+.meta-gap-2 {
+  gap: 0.5rem;
 }
 .meta-overflow-hidden {
   overflow: hidden;
@@ -822,6 +831,10 @@
 .meta-text-gray-900 {
   --tw-text-opacity: 1;
   color: rgb(17 24 39 / var(--tw-text-opacity));
+}
+.meta-text-red-500 {
+  --tw-text-opacity: 1;
+  color: rgb(239 68 68 / var(--tw-text-opacity));
 }
 .meta-text-white {
   --tw-text-opacity: 1;

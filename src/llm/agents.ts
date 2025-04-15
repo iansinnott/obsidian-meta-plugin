@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   createFileTool,
   listFilesTool,
+  obsidianAPITool,
   obsidianToolContextSchema,
   readFilesTool,
   searchFilesByNameTool,
@@ -122,8 +123,21 @@ export const createObsidianContentAgent = ({ llm }: { llm: LanguageModelV1 }) =>
   });
 };
 
+export const createObsidianAPIAgent = ({ llm }: { llm: LanguageModelV1 }) => {
+  return new Agent({
+    name: "obsidian plugin API",
+    instructions: `You are an AI agent that has direct access to the Obsidian API. Your tools give you full reign over the user's Obsidian vault.`,
+    model: llm,
+    contextSchema: obsidianToolContextSchema,
+    tools: {
+      obsidianAPITool,
+    },
+  });
+};
+
 export const createTeamManagerAgent = ({ llm }: { llm: LanguageModelV1 }) => {
-  const agents = [createObsidianContentAgent({ llm })];
+  const agents = [createObsidianContentAgent({ llm }), createObsidianAPIAgent({ llm })];
+
   return new Agent({
     name: "team manager",
     instructions: `You are an AI agent that manages a team of Obsidian experts

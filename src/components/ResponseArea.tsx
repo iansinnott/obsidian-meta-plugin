@@ -14,17 +14,29 @@ interface ResponseAreaProps {
 
 const ToolCallView: React.FC<ToolCall> = ({ toolCallId, toolName, args }) => {
   const _name = toolName === DELEGATE_TO_AGENT_TOOL_NAME ? args.agentId : toolName;
-  const result = useToolResult(toolCallId);
-
-  console.log("tool call result", toolCallId, result);
+  const { result, error, isLoading } = useToolResult(toolCallId);
 
   return (
     <details
       data-id={toolCallId}
       className={`${toolCallId} meta-mb-4 meta-rounded-md meta-border meta-border-gray-200 dark:meta-border-gray-700`}
     >
-      <summary className="meta-p-2 meta-cursor-pointer hover:meta-bg-gray-100 dark:hover:meta-bg-gray-800 meta-font-medium">
-        {result ? _name : <ShimmerText text={_name} />}
+      <summary className="meta-p-2 meta-cursor-pointer hover:meta-bg-gray-100 dark:hover:meta-bg-gray-800 meta-font-medium meta-flex meta-items-center meta-gap-2">
+        {isLoading ? <ShimmerText text={_name} /> : _name}
+        {error && (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="meta-h-4 meta-w-4 meta-text-red-500"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+              clipRule="evenodd"
+            />
+          </svg>
+        )}
       </summary>
       <code className="meta-p-3 meta-bg-gray-50 dark:meta-bg-gray-900 meta-block meta-rounded-b-md meta-overflow-x-auto meta-text-xs meta-whitespace-pre">
         {JSON.stringify(args, null, 2)}
@@ -36,6 +48,11 @@ const ToolCallView: React.FC<ToolCall> = ({ toolCallId, toolName, args }) => {
             const truncated = resultStr.length > 1000;
             return truncated ? `${resultStr.slice(0, 1000)}... (truncated)` : resultStr;
           })()}
+        </code>
+      )}
+      {error && (
+        <code className="meta-p-3 meta-bg-gray-100 dark:meta-bg-gray-800 meta-block meta-text-xs meta-overflow-x-auto meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-whitespace-pre">
+          {JSON.stringify(error, null, 2)}
         </code>
       )}
     </details>

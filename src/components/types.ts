@@ -17,4 +17,15 @@ export type ToolResultChunk = {
   result: any;
 };
 
-export type ResponseChunk = TextDeltaChunk | ToolCallChunk | ToolResultChunk;
+export type ErrorChunk = {
+  type: "error";
+  error: {
+    name: string;
+    cause: any;
+    toolArgs: Record<string, any>;
+    toolName: string;
+    toolCallId: string;
+  };
+};
+
+export type ResponseChunk = TextDeltaChunk | ToolCallChunk | ToolResultChunk | ErrorChunk;
