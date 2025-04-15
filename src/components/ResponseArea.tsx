@@ -6,6 +6,7 @@ import { type Message } from "../llm/chunk-processor";
 import type { ToolCall } from "./MetaSidebar";
 import { useToolResult, useChunkedMessages } from "../hooks/useChunkedMessages";
 import classNames from "classnames";
+import { motion, AnimatePresence } from "framer-motion";
 
 const capitalizeWords = (str: string) => {
   return str
@@ -24,27 +25,30 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
 
   const displayName = isSubAgentCall ? capitalizeWords(args.agentId) : toolName;
   const { result, error, isLoading } = useToolResult(callingAgentId, toolCallId);
-  const [isOpen, setIsOpen] = useState(isLoading);
+  const [isOpen, setIsOpen] = useState(isSubAgentCall ? isLoading : false);
 
   // For sub-agent calls, get the sub-agent's messages and chunks
   const subAgentData = isSubAgentCall ? useChunkedMessages(args.agentId) : null;
 
+  // Auto open/close functionality for sub-agent calls. I.e. show it to me while
+  // auto completing and then close it. It can of course be opened manually.
   useEffect(() => {
-    if (isLoading) {
-      setIsOpen(true);
-    } else if (!isLoading && !error) {
-      setIsOpen(false);
+    if (isSubAgentCall) {
+      if (isLoading) {
+        setIsOpen(true);
+      } else if (!isLoading && !error) {
+        setIsOpen(false);
+      }
     }
-  }, [isLoading, error]);
+  }, [isLoading, error, isSubAgentCall]);
 
   return (
-    <details
+    <div
       data-id={toolCallId}
       className={`${toolCallId} tool-call-container meta-rounded-lg meta-border meta-border-solid meta-border-gray-200 dark:meta-border-gray-700 meta-mt-2 meta-bg-black/10 dark:meta-bg-white/10`}
-      open={isOpen}
-      onToggle={(e) => setIsOpen(e.currentTarget.open)}
     >
-      <summary
+      <div
+        onClick={() => setIsOpen(!isOpen)}
         className={classNames(
           "meta-p-2 meta-cursor-pointer hover:meta-bg-gray-100 dark:hover:meta-bg-gray-800 meta-font-medium meta-flex meta-items-center meta-gap-2 meta-border-b meta-border-gray-200 dark:meta-border-gray-700",
           {
@@ -68,7 +72,9 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
             d="M8 9l3 3-3 3m5 0h3"
           />
         </svg>
-        {isLoading ? <ShimmerText text={displayName} /> : displayName}
+        <span className="meta-text-xs">
+          {isLoading ? <ShimmerText text={displayName} /> : displayName}
+        </span>
         {error && (
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -83,42 +89,54 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
             />
           </svg>
         )}
-      </summary>
+      </div>
 
-      {isSubAgentCall && subAgentData ? (
-        // Render a nested AgentResponseArea for sub-agent calls
-        <div className="meta-border-t meta-border-gray-200 dark:meta-border-gray-700">
-          <AgentResponseArea
-            isLoading={isLoading}
-            messages={subAgentData.messages}
-            chunks={subAgentData.chunks}
-            agentId={args.agentId}
-          />
-        </div>
-      ) : (
-        // Render the regular tool call view for normal tool calls
-        <>
-          <code className="meta-p-3 meta-bg-gray-50 dark:meta-bg-gray-900 meta-block meta-rounded-b-md meta-overflow-x-auto meta-text-xs meta-whitespace-pre">
-            {JSON.stringify(args, null, 2)}
-          </code>
-          {result && (
-            <code className="meta-p-3 meta-bg-gray-100 dark:meta-bg-gray-800 meta-block meta-text-xs meta-overflow-x-auto meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-whitespace-pre">
-              {(() => {
-                const resultStr = JSON.stringify(result, null, 2);
-                const truncated = resultStr.length > 1000;
-                return truncated ? `${resultStr.slice(0, 1000)}... (truncated)` : resultStr;
-              })()}
-            </code>
-          )}
-        </>
-      )}
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            style={{ overflow: "hidden" }}
+          >
+            {isSubAgentCall && subAgentData ? (
+              // Render a nested AgentResponseArea for sub-agent calls
+              <div className="meta-border-t meta-border-gray-200 dark:meta-border-gray-700">
+                <AgentResponseArea
+                  isLoading={isLoading}
+                  messages={subAgentData.messages}
+                  chunks={subAgentData.chunks}
+                  agentId={args.agentId}
+                />
+              </div>
+            ) : (
+              // Render the regular tool call view for normal tool calls
+              <>
+                <code className="meta-p-3 meta-bg-gray-50 dark:meta-bg-gray-900 meta-block meta-rounded-b-md meta-overflow-x-auto meta-text-xs meta-whitespace-pre">
+                  {JSON.stringify(args, null, 2)}
+                </code>
+                {result && (
+                  <code className="meta-p-3 meta-bg-gray-100 dark:meta-bg-gray-800 meta-block meta-text-xs meta-overflow-x-auto meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-whitespace-pre">
+                    {(() => {
+                      const resultStr = JSON.stringify(result, null, 2);
+                      const truncated = resultStr.length > 1000;
+                      return truncated ? `${resultStr.slice(0, 1000)}... (truncated)` : resultStr;
+                    })()}
+                  </code>
+                )}
+              </>
+            )}
 
-      {error && (
-        <code className="meta-p-3 meta-bg-gray-100 dark:meta-bg-gray-800 meta-block meta-text-xs meta-overflow-x-auto meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-whitespace-pre">
-          {JSON.stringify(error, null, 2)}
-        </code>
-      )}
-    </details>
+            {error && (
+              <code className="meta-p-3 meta-bg-gray-100 dark:meta-bg-gray-800 meta-block meta-text-xs meta-overflow-x-auto meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-whitespace-pre">
+                {JSON.stringify(error, null, 2)}
+              </code>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 
@@ -131,32 +149,38 @@ const MessageBubble: React.FC<{ message: Message; isLoading: boolean; agentId: s
   const isUser = message.role === "user";
 
   return (
-    <div
-      className={`meta-mb-2 ${
-        isUser
-          ? "meta-ml-auto meta-max-w-[85%] meta-border meta-border-gray-200 dark:meta-border-gray-700"
-          : "meta-w-full"
-      }`}
-    >
+    <div className={`meta-mb-2 meta-w-full`}>
       <div
-        className={`meta-rounded-lg${
+        className={classNames(
+          "meta-rounded-lg",
           isUser
             ? "meta-bg-blue-500 meta-text-white meta-p-2"
             : "meta-text-gray-900 dark:meta-text-gray-100"
-        }`}
+        )}
       >
         {isUser ? (
-          <p className="meta-m-0">
-            {message.content
-              ?.filter((c) => c.type === "text")
-              .map((c) => c.text)
-              .join("")}
-          </p>
+          <>
+            <div className="meta-flex meta-items-center">
+              <svg
+                className="meta-w-4 meta-h-4 meta-mr-2 meta-text-white meta-fill-current"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+              </svg>
+              <p className="meta-m-0">
+                {message.content
+                  ?.filter((c) => c.type === "text")
+                  .map((c) => c.text)
+                  .join("")}
+              </p>
+            </div>
+          </>
         ) : (
           <>
             {/* Render message content */}
             {message.content && (
-              <div className="meta-prose meta-prose-sm dark:meta-prose-invert meta-max-w-none meta-bg-gray-200 dark:meta-bg-gray-700 meta-p-3 meta-rounded-lg">
+              <div className="meta-prose meta-prose-sm dark:meta-prose-invert meta-max-w-none meta-bg-gray-200 dark:meta-bg-gray-700 meta-p-3 meta-rounded-lg meta-overflow-auto">
                 <ReactMarkdown>
                   {message.content
                     ?.filter((c) => c.type === "text")

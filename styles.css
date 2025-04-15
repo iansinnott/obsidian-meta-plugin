@@ -717,6 +717,9 @@
 .meta-gap-2 {
   gap: 0.5rem;
 }
+.meta-overflow-auto {
+  overflow: auto;
+}
 .meta-overflow-hidden {
   overflow: hidden;
 }
@@ -792,6 +795,9 @@
 }
 .meta-bg-black\/10 {
   background-color: rgb(0 0 0 / 0.1);
+}
+.meta-fill-current {
+  fill: currentColor;
 }
 .meta-p-1 {
   padding: 0.25rem;
