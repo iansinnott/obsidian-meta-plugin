@@ -2,12 +2,15 @@ import { generateText, streamText, tool, type LanguageModelV1, type ToolSet } fr
 import { z } from "zod";
 import {
   createFileTool,
+  getCurrentThemeTool,
+  listAvailableThemesTool,
   listFilesTool,
   obsidianAPITool,
   obsidianToolContextSchema,
   readFilesTool,
   searchFilesByNameTool,
   searchVaultTool,
+  setThemeTool,
   updateFileTool,
 } from "./tools/obsidian";
 import { createDirectReportDelegationTool } from "./tools";
@@ -15,12 +18,23 @@ import { getCurrentDateTime } from "./tools/locale";
 
 export const DELEGATE_TO_AGENT_TOOL_NAME = "delegateToAgent";
 
-interface AgentArgs<TTools extends ToolSet, TSchema extends z.ZodTypeAny = z.ZodObject<{}>> {
+interface AgentArgs<
+  TTools extends ToolSet,
+  TSchema extends z.ZodTypeAny = z.ZodObject<{}>,
+  TSubAgent extends Agent = Agent
+> {
   name: string;
   instructions: string;
   model: LanguageModelV1;
   tools?: TTools;
   contextSchema?: TSchema;
+  agents?: TSubAgent[];
+  onSubAgentChunk?: (arg: {
+    agentId: string;
+    toolCallId: string;
+    chunk: any;
+    context: z.infer<TSchema>;
+  }) => void;
 }
 
 type GenerateTextArg = Omit<Parameters<typeof generateText>[0], "model" | "system" | "tools">;
@@ -35,20 +49,33 @@ type StreamTextArg = Omit<Parameters<typeof streamText>[0], "model" | "system" |
 export class Agent<
   TTools extends ToolSet = {},
   TSchema extends z.ZodTypeAny = z.ZodObject<{}>,
-  TContext = z.infer<TSchema>
+  TContext = z.infer<TSchema>,
+  TSubAgent extends Agent = any
 > {
   readonly name: string;
   readonly instructions: string;
   readonly model: LanguageModelV1;
   readonly tools: TTools;
   readonly contextSchema?: TSchema;
+  readonly agents?: TSubAgent[];
 
-  constructor(args: AgentArgs<TTools, TSchema>) {
+  constructor(args: AgentArgs<TTools, TSchema, TSubAgent>) {
     this.name = args.name;
     this.instructions = args.instructions;
     this.model = args.model;
-    this.tools = args.tools || ({} as TTools);
     this.contextSchema = args.contextSchema;
+    this.agents = args.agents;
+    this.tools = args.tools || ({} as TTools);
+
+    // Add the delegation tool if there are agents
+    if (this.agents) {
+      this.tools = {
+        ...this.tools,
+        [DELEGATE_TO_AGENT_TOOL_NAME]: createDirectReportDelegationTool<TContext>(this.agents, {
+          onChunk: args.onSubAgentChunk,
+        }),
+      };
+    }
   }
 
   private wrapTools(tools: TTools, context?: TContext): TTools {
@@ -119,6 +146,7 @@ export const createObsidianContentAgent = ({ llm }: { llm: LanguageModelV1 }) =>
       updateFileTool,
       searchFilesByNameTool,
       searchVaultTool,
+      getCurrentDateTime,
     },
   });
 };
@@ -135,8 +163,27 @@ export const createObsidianAPIAgent = ({ llm }: { llm: LanguageModelV1 }) => {
   });
 };
 
+export const createObsidianThemesAgent = ({ llm }: { llm: LanguageModelV1 }) => {
+  return new Agent({
+    name: "obsidian theme manager",
+    instructions: `You are an AI agent that specializes in themeing Obsidian and managing the user's exisdting themes.`,
+    model: llm,
+    contextSchema: obsidianToolContextSchema,
+    tools: {
+      getCurrentTheme: getCurrentThemeTool,
+      listAvaialbleThemes: listAvailableThemesTool,
+      setThemeTool,
+    },
+  });
+};
+
 export const createTeamManagerAgent = ({ llm }: { llm: LanguageModelV1 }) => {
-  const agents = [createObsidianContentAgent({ llm }), createObsidianAPIAgent({ llm })];
+  // prettier-ignore
+  const agents = [
+    createObsidianContentAgent({ llm }), 
+    createObsidianThemesAgent({ llm }),
+    // createObsidianAPIAgent({ llm }),
+  ];
 
   return new Agent({
     name: "team manager",
@@ -160,13 +207,18 @@ You can delegate tasks to these team members using the
 ${DELEGATE_TO_AGENT_TOOL_NAME} tool. Do not mention to the user that you're
 delegatin. The UI will display a tool call message box to the user which makes
 it redundant to mention it in prose. For example, do not preface with "Now I
-will delegate...".`,
+will delegate...".
+
+You can also utilize the obsidian API _directly_, but this is highly
+discouraged. Please only use this functionality when you're team is unable to
+handle a user request.`,
     model: llm,
     contextSchema: obsidianToolContextSchema,
+    // @ts-ignore for now - something about the streams
+    agents,
     tools: {
-      // @ts-ignore for now
-      [DELEGATE_TO_AGENT_TOOL_NAME]: createDirectReportDelegationTool(agents),
       getCurrentDateTime,
+      obsidianAPITool,
     },
   });
 };

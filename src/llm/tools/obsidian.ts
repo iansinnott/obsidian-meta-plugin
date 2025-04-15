@@ -3,13 +3,15 @@ import { tool, type ToolExecutionOptions } from "ai";
 import type { App } from "obsidian";
 import path from "path";
 import { z } from "zod";
+import type { ChunkProcessor } from "../chunk-processor";
 
 export const obsidianToolContextSchema = z.object({
   app: z.custom<App>(),
   plugin: z.custom<MetaPlugin>(),
+  chunkProcessor: z.custom<ChunkProcessor>(),
 });
 
-type ObsidianContext = z.infer<typeof obsidianToolContextSchema>;
+export type ObsidianContext = z.infer<typeof obsidianToolContextSchema>;
 
 export const listFilesTool = tool({
   description: "List files in the vault. Returns file path, last modified time, and size in bytes.",
@@ -335,8 +337,7 @@ export const getCurrentThemeTool = tool({
     const { app } = options.context;
 
     try {
-      // Use our augmented types instead of type assertions
-      const activeTheme = app.vault.config.cssTheme;
+      const activeTheme = app.customCss?.theme || app.vault.config.cssTheme;
 
       return {
         success: true,
@@ -366,30 +367,15 @@ export const listAvailableThemesTool = tool({
     const { plugin } = options.context;
     const app = plugin.app;
     const vault = app.vault;
-    const adapter = vault.adapter;
 
     try {
-      const { folders } = await adapter.list(vault.configDir);
-      const themeDir = folders.find((x) => x.includes("themes"));
-      if (!themeDir) {
-        throw new Error("No themes directory found");
-      }
-
-      const { folders: themeFolders } = await adapter.list(themeDir);
-      const themes = await Promise.all(
-        themeFolders.map(async (themeFolder) => {
-          const manifest = JSON.parse(await adapter.read(path.join(themeFolder, "manifest.json")));
-          return {
-            manifest,
-            path: themeFolder,
-            isActive: vault.config.cssTheme === manifest.name,
-          };
-        })
-      );
+      const activeTheme = app.customCss?.theme || app.vault.config.cssTheme;
+      const themes = app.customCss?.themes;
 
       return {
         success: true,
         themes,
+        activeTheme,
       };
     } catch (error) {
       return {
@@ -402,5 +388,23 @@ export const listAvailableThemesTool = tool({
         },
       };
     }
+  },
+});
+
+export const setThemeTool = tool({
+  description:
+    "Set the currently active Obsidian theme. Only installed themes can be set. First list available themes if unsure. If the user requests a theme that is not available tell them as much.",
+  parameters: z.object({
+    themeName: z.string().describe("The name of the theme to set. Must already be installed."),
+  }),
+  execute: async ({ themeName }, options: ToolExecutionOptions & { context: ObsidianContext }) => {
+    const { app } = options.context;
+    if (!app.customCss) {
+      throw new Error("No custom CSS found");
+    }
+
+    app.customCss.setTheme(themeName);
+
+    return { success: true, message: "Theme set successfully" };
   },
 });

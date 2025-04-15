@@ -22,7 +22,7 @@ export interface ToolCall {
 }
 
 export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) => {
-  const app = useApp();
+  const ctx = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const { messages, chunks, appendMessage, appendResponseChunk, reset, getMessages, getChunks } =
     useChunkedMessages();
@@ -51,7 +51,7 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
               maxTokens: 8000,
               temperature: 0,
             },
-            { app }
+            ctx
           );
 
           // @todo remove. dev - want to see what the same requests gives us when done without streaming
@@ -65,7 +65,7 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
           //       maxTokens: 8000,
           //       temperature: 0,
           //     },
-          //     { app }
+          //     ctx,
           //   )
           //   .then((response) => {
           //     console.log("dev gen response", response);
@@ -101,7 +101,7 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
         setIsLoading(false);
       }
     },
-    [plugin, app, appendMessage, getMessages, getChunks, appendResponseChunk]
+    [plugin, ctx, appendMessage, getMessages, getChunks, appendResponseChunk]
   );
 
   return (

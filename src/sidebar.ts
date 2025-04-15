@@ -38,7 +38,7 @@ export class MetaSidebarView extends ItemView {
 
   // Set up the sidebar content when opening
   async onOpen(): Promise<void> {
-    const { contentEl, app } = this;
+    const { contentEl, app, plugin } = this;
 
     // Clear content
     contentEl.empty();
@@ -53,7 +53,7 @@ export class MetaSidebarView extends ItemView {
     this.root.render(
       React.createElement(
         AppProvider,
-        { value: app },
+        { value: { app, plugin } },
         React.createElement(MetaSidebar, {
           plugin: this.plugin,
           component: this.component,
