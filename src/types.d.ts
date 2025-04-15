@@ -13,6 +13,7 @@ declare module "obsidian" {
   interface App {
     // Custom CSS module
     customCss?: {
+      theme: string;
       themes: {
         [themeId: string]: {
           name: string;
@@ -26,6 +27,8 @@ declare module "obsidian" {
 
       /** The names of css snippet files installed in the current vault. Does not include the .css extension. Does not include active status. */
       snippets: string[];
+
+      setTheme: (themeName: string) => void;
     };
 
     // Plugin module
