@@ -58,8 +58,6 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
           for await (const chunk of stream.fullStream) {
             appendResponseChunk(chunk as ResponseChunk);
           }
-
-          console.log("stream response", await stream.response);
         } else {
           const errorMessage = "Agent not initialized. Please check your settings.";
           const errorAssistantMessage: Message = {
@@ -105,6 +103,7 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
           messages={messages} // Pass the conversation to display message history
           chunks={chunks}
           agentId={plugin.agent?.name}
+          threadId={threadId}
         />
       </div>
 

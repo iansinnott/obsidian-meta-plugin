@@ -188,7 +188,7 @@ export const createTeamManagerAgent = ({ llm }: { llm: LanguageModelV1 }) => {
     // createObsidianAPIAgent({ llm }),
   ];
 
-  return new Agent({
+  const agent = new Agent({
     name: "team manager",
     instructions: `You are an AI agent that manages a team of Obsidian experts
 that can help the user with all sorts of tasks. Your team of experts are
@@ -219,14 +219,16 @@ handle a user request.`,
     contextSchema: obsidianToolContextSchema,
     // @ts-ignore for now - something about the streams
     agents,
-    onSubAgentChunk: ({ agentId, toolCallId, chunk, context }) => {
-      const processor = context.getProcessor(agentId, toolCallId);
+    onSubAgentChunk: ({ toolCallId, chunk, context }) => {
+      const processor = context.getProcessor(agent.name, toolCallId);
       processor.appendChunk(chunk);
-      console.log(agentId + ":" + toolCallId, chunk, processor);
+      console.log(agent.name + ":" + toolCallId, chunk, processor);
     },
     tools: {
       getCurrentDateTime,
       obsidianAPITool,
     },
   });
+
+  return agent;
 };

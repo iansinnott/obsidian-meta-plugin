@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
+
 import type { ErrorChunk, ResponseChunk } from "../components/types";
 import { type Message } from "../llm/chunk-processor";
-import { getProcessor, getSubscribers, processors } from "./state";
+import { getProcessor, getProcessorsMap, getSubscribers } from "./state";
 
 // Plain utility function to find a tool result
 export const findToolResult = (
@@ -32,7 +33,7 @@ export const useChunkedMessages = (agentId: string, threadId: string = "default"
   // @todo remove before distributing
   useEffect(() => {
     if (!(window as any).processors) {
-      (window as any).processors = processors;
+      (window as any).processors = getProcessorsMap();
     }
   }, []);
 
@@ -53,8 +54,13 @@ export const useChunkedMessages = (agentId: string, threadId: string = "default"
   }, [agentId, threadId, processor]);
 
   const reset = useCallback(() => {
-    processor.reset();
-  }, [processor]);
+    const map = getProcessorsMap();
+    for (const [key, processor] of map.entries()) {
+      if (key.startsWith(agentId)) {
+        processor.reset();
+      }
+    }
+  }, []);
 
   const getToolResult = useCallback(
     (toolCallId: string) => findToolResult(chunks, toolCallId),
@@ -79,32 +85,70 @@ export const useChunkedMessages = (agentId: string, threadId: string = "default"
   };
 };
 
-// Hook specifically for tool results that will react to changes
-export const useToolResult = (agentId: string, toolCallId: string) => {
-  const processor = getProcessor(agentId, toolCallId);
+/**
+ * Hook specifically for tracking tool execution results that will react to changes.
+ *
+ * This hook monitors the execution of a specific tool call and provides real-time
+ * updates about its result or error state. It's particularly useful for displaying
+ * tool execution progress in UI components.
+ *
+ * @param agentId - The ID of the agent that initiated the tool call. This might be confusing for delegated agent use, but it will be the calling agent's ID. The one that initiated the delegation, which is just a tool call. So it's the calling agent's ID.
+ * @param toolCallId - The unique ID of the specific tool call to monitor
+ * @returns An object containing:
+ *   - result: The current result of the tool execution (null if not completed)
+ *   - error: Any error that occurred during tool execution (null if no error)
+ *   - isLoading: Boolean indicating if the tool is still executing (true if no result or error yet)
+ *   - agentId: The ID of the agent that initiated the tool call (passed through)
+ */
+export const useToolResult = (agentId: string, threadId: string, toolCallId: string) => {
+  const processor = getProcessor(agentId, threadId);
   const [result, setResult] = useState<ResponseChunk | null>(null);
   const [error, setError] = useState<ErrorChunk | null>(null);
 
   useEffect(() => {
-    // Initial state
-    setResult(findToolResult(processor.getChunks(), toolCallId));
-    setError(findToolError(processor.getChunks(), toolCallId));
+    // Helper function to find result or error across all processors
+    const findAcrossProcessors = <T>(
+      findFn: (chunks: ResponseChunk[], id: string) => T | null,
+      toolCallId: string
+    ): { data: T | null; source?: string } => {
+      // First check in the current processor
+      let data = findFn(processor.getChunks(), toolCallId);
+      if (data) return { data };
 
-    // Create subscriber function
-    const updateResult = () => {
-      setResult(findToolResult(processor.getChunks(), toolCallId));
-      setError(findToolError(processor.getChunks(), toolCallId));
+      // If not found, search in other processors
+      for (const [k, v] of getProcessorsMap().entries()) {
+        if (k.startsWith(agentId)) continue; // Skip if it's the same agent
+        const found = findFn(v.getChunks(), toolCallId);
+        if (found) {
+          console.warn("useToolResult", agentId, toolCallId, "data misplaced in", k, v);
+          return { data: found, source: k };
+        }
+      }
+
+      return { data: null };
     };
 
+    // Function to update state with latest data
+    const updateState = () => {
+      const { data: resultData } = findAcrossProcessors(findToolResult, toolCallId);
+      const { data: errorData } = findAcrossProcessors(findToolError, toolCallId);
+
+      setResult(resultData);
+      setError(errorData);
+    };
+
+    // Initial update
+    updateState();
+
     // Add subscriber
-    const subscribers = getSubscribers(agentId, toolCallId);
-    subscribers.add(updateResult);
+    const subscribers = getSubscribers(agentId, threadId);
+    subscribers.add(updateState);
 
     // Clean up
     return () => {
-      subscribers.delete(updateResult);
+      subscribers.delete(updateState);
     };
-  }, [toolCallId, agentId, processor]);
+  }, [toolCallId, agentId, threadId, processor]);
 
   return { result, error, isLoading: !result && !error, agentId };
 };

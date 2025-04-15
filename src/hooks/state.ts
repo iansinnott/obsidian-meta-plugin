@@ -5,11 +5,32 @@ const createKey = (agentId: string, threadId: string): string => {
   return `${agentId}:${threadId}`;
 };
 
-// Exported for debugging purposes
-export const processors = new Map<string, ChunkProcessor>();
+// Use a singleton pattern for processors to ensure only one instance exists
+let processorsInstance: Map<string, ChunkProcessor> | null = null;
+
+// Getter function to ensure we always get the same Map instance
+export const getProcessorsMap = (): Map<string, ChunkProcessor> => {
+  if (processorsInstance === null) {
+    processorsInstance = new Map<string, ChunkProcessor>();
+  }
+  return processorsInstance;
+};
+
+// Exported for debugging purposes - use the getter to ensure singleton
+export const processors = getProcessorsMap();
 
 // Create a Map of subscribers for different agent+thread combinations
-export const subscribersMap = new Map<string, Set<() => void>>();
+// Use a singleton pattern here too for consistency
+let subscribersMapInstance: Map<string, Set<() => void>> | null = null;
+
+export const getSubscribersMap = (): Map<string, Set<() => void>> => {
+  if (subscribersMapInstance === null) {
+    subscribersMapInstance = new Map<string, Set<() => void>>();
+  }
+  return subscribersMapInstance;
+};
+
+export const subscribersMap = getSubscribersMap();
 
 // Helper function to get or create subscribers for an agent+thread
 export const getSubscribers = (agentId: string, threadId: string): Set<() => void> => {
@@ -34,8 +55,9 @@ export const getProcessor = (agentId: string, threadId: string): ChunkProcessor 
   }
 
   const key = createKey(agentId, threadId);
+  const processorsMap = getProcessorsMap();
 
-  if (!processors.has(key)) {
+  if (!processorsMap.has(key)) {
     const processor = new ChunkProcessor();
 
     // Wrap the processor's methods to trigger notifications
@@ -62,9 +84,9 @@ export const getProcessor = (agentId: string, threadId: string): ChunkProcessor 
       return result;
     };
 
-    console.log("setting processor", key, processor, processors);
-    processors.set(key, processor);
+    console.log("setting processor", key, processor, processorsMap);
+    processorsMap.set(key, processor);
   }
 
-  return processors.get(key)!;
+  return processorsMap.get(key)!;
 };

@@ -15,20 +15,25 @@ const capitalizeWords = (str: string) => {
     .join(" ");
 };
 
-const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
+const ToolCallView: React.FC<ToolCall & { callingAgentId: string; threadId: string }> = ({
+  callingAgentId,
+  threadId,
   toolCallId,
   toolName,
   args,
-  callingAgentId,
 }) => {
   const isSubAgentCall = toolName === DELEGATE_TO_AGENT_TOOL_NAME;
-
   const displayName = isSubAgentCall ? capitalizeWords(args.agentId) : toolName;
-  const { result, error, isLoading } = useToolResult(args.agentId, toolCallId);
-  const [isOpen, setIsOpen] = useState(isSubAgentCall ? isLoading : false);
+  const { result, error, isLoading } = useToolResult(callingAgentId, threadId, toolCallId);
 
   // For sub-agent calls, get the sub-agent's messages and chunks
-  const subAgentData = isSubAgentCall ? useChunkedMessages(args.agentId) : null;
+  const subAgentData = isSubAgentCall ? useChunkedMessages(callingAgentId, toolCallId) : null;
+
+  const [isOpen, setIsOpen] = useState(isSubAgentCall ? isLoading : false);
+
+  useEffect(() => {
+    (window as any).subAgentData = subAgentData;
+  }, [subAgentData]);
 
   // Auto open/close functionality for sub-agent calls. I.e. show it to me while
   // auto completing and then close it. It can of course be opened manually.
@@ -47,6 +52,7 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
       data-tool-call-id={toolCallId}
       data-calling-agent-id={callingAgentId}
       data-arg-agent-id={args.agentId}
+      data-thread-id={threadId}
       className={`${toolCallId} tool-call-container meta-rounded-lg meta-border meta-border-solid meta-border-gray-200 dark:meta-border-gray-700 meta-mt-2 meta-bg-black/10 dark:meta-bg-white/10`}
     >
       <div
@@ -110,6 +116,7 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
                   messages={subAgentData.messages}
                   chunks={subAgentData.chunks}
                   agentId={args.agentId}
+                  threadId={toolCallId}
                 />
               </div>
             ) : (
@@ -143,11 +150,12 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
 };
 
 // Component to display each message in the conversation
-const MessageBubble: React.FC<{ message: Message; isLoading: boolean; agentId: string }> = ({
-  message,
-  isLoading,
-  agentId,
-}) => {
+const MessageBubble: React.FC<{
+  message: Message;
+  isLoading: boolean;
+  agentId: string;
+  threadId: string;
+}> = ({ message, isLoading, agentId, threadId }) => {
   const isUser = message.role === "user";
 
   return (
@@ -196,7 +204,14 @@ const MessageBubble: React.FC<{ message: Message; isLoading: boolean; agentId: s
             {message.content
               ?.filter((c) => c.type === "tool-call")
               .map((c) => {
-                return <ToolCallView key={c.toolCallId} {...c} callingAgentId={agentId} />;
+                return (
+                  <ToolCallView
+                    key={c.toolCallId}
+                    {...c}
+                    callingAgentId={agentId}
+                    threadId={threadId}
+                  />
+                );
               })}
           </>
         )}
@@ -210,6 +225,7 @@ interface AgentResponseAreaProps {
   isLoading: boolean;
   messages?: Message[]; // Conversation history
   agentId: string;
+  threadId: string;
 }
 
 export const AgentResponseArea: React.FC<AgentResponseAreaProps> = ({
@@ -217,6 +233,7 @@ export const AgentResponseArea: React.FC<AgentResponseAreaProps> = ({
   messages = [],
   chunks = [],
   agentId,
+  threadId,
 }) => {
   const responseRef = useRef<HTMLDivElement>(null);
 
@@ -232,7 +249,7 @@ export const AgentResponseArea: React.FC<AgentResponseAreaProps> = ({
     return (
       <div className="meta-flex-1 meta-overflow-y-auto meta-w-full meta-h-full meta-p-2">
         <div className="meta-text-center meta-py-2 meta-font-medium">
-          <ShimmerText text="Processing..." />
+          <ShimmerText text="..." />
         </div>
       </div>
     );
@@ -254,6 +271,7 @@ export const AgentResponseArea: React.FC<AgentResponseAreaProps> = ({
             message={message}
             isLoading={isLoading}
             agentId={agentId}
+            threadId={threadId}
           />
         ))}
     </div>
