@@ -1,12 +1,12 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Component } from "obsidian";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useApp } from "../hooks/useApp";
+import { useChunkedMessages } from "../hooks/useChunkedMessages";
+import { type Message } from "../llm/chunk-processor";
+import type { MetaPlugin as IMetaPlugin } from "../plugin";
 import { PromptInput } from "./PromptInput";
 import { AgentResponseArea } from "./ResponseArea";
-import { useApp } from "../hooks/useApp";
 import type { ResponseChunk } from "./types";
-import type { MetaPlugin as IMetaPlugin } from "../plugin";
-import { type Message } from "../llm/chunk-processor";
-import { useChunkedMessages } from "../hooks/useChunkedMessages";
 
 interface MetaSidebarProps {
   plugin: IMetaPlugin;
@@ -21,11 +21,12 @@ export interface ToolCall {
   result?: any;
 }
 
-export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin }) => {
+export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) => {
   const ctx = useApp();
   const [isLoading, setIsLoading] = useState(false);
+  const threadId = "root";
   const { messages, chunks, appendMessage, appendResponseChunk, reset, getMessages, getChunks } =
-    useChunkedMessages(plugin.agent?.name);
+    useChunkedMessages(plugin.agent?.name, threadId);
 
   const handleSubmit = useCallback(
     async (prompt: string) => {
@@ -53,26 +54,6 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin }) => {
             },
             ctx
           );
-
-          // @todo remove. dev - want to see what the same requests gives us when done without streaming
-          // plugin.agent
-          //   .generateText(
-          //     {
-          //       // @ts-expect-error - some deeply nested thing
-          //       messages: getMessages(),
-          //       maxSteps: 10,
-          //       maxRetries: 2,
-          //       maxTokens: 8000,
-          //       temperature: 0,
-          //     },
-          //     ctx,
-          //   )
-          //   .then((response) => {
-          //     console.log("dev gen response", response);
-          //   })
-          //   .catch((err) => {
-          //     console.error("Error with dev gen call:", err);
-          //   });
 
           for await (const chunk of stream.fullStream) {
             appendResponseChunk(chunk as ResponseChunk);

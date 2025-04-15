@@ -7,7 +7,7 @@ import type { ChunkProcessor } from "../chunk-processor";
 export const obsidianToolContextSchema = z.object({
   app: z.custom<App>(),
   plugin: z.custom<MetaPlugin>(),
-  getProcessor: z.function().args(z.string()).returns(z.custom<ChunkProcessor>()),
+  getProcessor: z.function().args(z.string(), z.string()).returns(z.custom<ChunkProcessor>()),
 });
 
 export type ObsidianContext = z.infer<typeof obsidianToolContextSchema>;

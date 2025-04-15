@@ -1,12 +1,12 @@
+import classNames from "classnames";
+import { AnimatePresence, motion } from "framer-motion";
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { ShimmerText } from "./ShimmerText";
+import { useChunkedMessages, useToolResult } from "../hooks/useChunkedMessages";
 import { DELEGATE_TO_AGENT_TOOL_NAME } from "../llm/agents";
 import { type Message } from "../llm/chunk-processor";
 import type { ToolCall } from "./MetaSidebar";
-import { useToolResult, useChunkedMessages } from "../hooks/useChunkedMessages";
-import classNames from "classnames";
-import { motion, AnimatePresence } from "framer-motion";
+import { ShimmerText } from "./ShimmerText";
 
 const capitalizeWords = (str: string) => {
   return str
@@ -24,7 +24,7 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
   const isSubAgentCall = toolName === DELEGATE_TO_AGENT_TOOL_NAME;
 
   const displayName = isSubAgentCall ? capitalizeWords(args.agentId) : toolName;
-  const { result, error, isLoading } = useToolResult(callingAgentId, toolCallId);
+  const { result, error, isLoading } = useToolResult(args.agentId, toolCallId);
   const [isOpen, setIsOpen] = useState(isSubAgentCall ? isLoading : false);
 
   // For sub-agent calls, get the sub-agent's messages and chunks
@@ -44,16 +44,18 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
 
   return (
     <div
-      data-id={toolCallId}
+      data-tool-call-id={toolCallId}
+      data-calling-agent-id={callingAgentId}
+      data-arg-agent-id={args.agentId}
       className={`${toolCallId} tool-call-container meta-rounded-lg meta-border meta-border-solid meta-border-gray-200 dark:meta-border-gray-700 meta-mt-2 meta-bg-black/10 dark:meta-bg-white/10`}
     >
       <div
         onClick={() => setIsOpen(!isOpen)}
         className={classNames(
-          "meta-p-2 meta-cursor-pointer hover:meta-bg-gray-100 dark:hover:meta-bg-gray-800 meta-font-medium meta-flex meta-items-center meta-gap-2 meta-border-b meta-border-gray-200 dark:meta-border-gray-700",
+          "meta-p-2 meta-cursor-pointer hover:meta-bg-gray-100 dark:hover:meta-bg-gray-800 meta-font-medium meta-flex meta-items-center meta-gap-2 meta-border-b meta-border-b-solid meta-border-gray-200 dark:meta-border-gray-700",
           {
             "meta-border-b-0": !isOpen,
-            "meta-border-b-1 meta-border-solid": isOpen,
+            "meta-border-b-1 meta-border-b-solid": isOpen,
           }
         )}
       >

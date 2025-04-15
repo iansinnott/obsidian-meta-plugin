@@ -1,11 +1,11 @@
-import { ItemView, WorkspaceLeaf, type App, Component } from "obsidian";
-import type { MetaPlugin as IMetaPlugin } from "./plugin";
+import { Component, ItemView, WorkspaceLeaf, type App } from "obsidian";
 import * as React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MetaSidebar } from "./components/MetaSidebar";
-import { AppProvider } from "./hooks/useApp";
 import "./components/metaSidebar.css";
 import { getProcessor } from "./hooks/state";
+import { AppProvider } from "./hooks/useApp";
+import type { MetaPlugin as IMetaPlugin } from "./plugin";
 
 // Define a unique view type for the sidebar
 export const META_SIDEBAR_VIEW_TYPE = "meta-sidebar-view";

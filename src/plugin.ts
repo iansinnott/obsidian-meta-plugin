@@ -1,15 +1,11 @@
-import { type App, Editor, MarkdownView, Notice, Plugin } from "obsidian";
-
-import { OpenAI } from "openai";
-import { MetaSettingTab, DEFAULT_SETTINGS } from "./settings";
-import { SampleModal } from "./modal";
-import { createOpenAI, type OpenAIProvider } from "@ai-sdk/openai";
+import { Plugin } from "obsidian";
+import { createAnthropic, type AnthropicProvider } from "@ai-sdk/anthropic";
 import type { LanguageModelV1 } from "ai";
-import { Agent, createTeamManagerAgent } from "./llm/agents";
-import { listFilesTool, obsidianToolContextSchema, readFilesTool } from "./llm/tools/obsidian";
-import { MetaSidebarView, META_SIDEBAR_VIEW_TYPE, activateSidebarView } from "./sidebar";
-import { createObsidianContentAgent } from "./llm/agents";
-import { anthropic, createAnthropic, type AnthropicProvider } from "@ai-sdk/anthropic";
+import { createOpenAI, type OpenAIProvider } from "@ai-sdk/openai";
+import { createTeamManagerAgent } from "./llm/agents";
+import { SampleModal } from "./modal";
+import { DEFAULT_SETTINGS, MetaSettingTab } from "./settings";
+import { META_SIDEBAR_VIEW_TYPE, MetaSidebarView, activateSidebarView } from "./sidebar";
 
 export class MetaPlugin extends Plugin {
   settings: typeof DEFAULT_SETTINGS;

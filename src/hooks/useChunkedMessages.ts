@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { ChunkProcessor, type Message } from "../llm/chunk-processor";
-import type { ResponseChunk, ErrorChunk } from "../components/types";
-import { getProcessor, processors, getSubscribers } from "./state";
+import type { ErrorChunk, ResponseChunk } from "../components/types";
+import { type Message } from "../llm/chunk-processor";
+import { getProcessor, getSubscribers, processors } from "./state";
 
 // Plain utility function to find a tool result
 export const findToolResult = (
@@ -22,9 +22,9 @@ export const findToolError = (chunks: ResponseChunk[], toolCallId: string): Erro
   );
 };
 
-// Hook to use the chunked messages for a specific agent
-export const useChunkedMessages = (agentId: string) => {
-  const processor = getProcessor(agentId);
+// Hook to use the chunked messages for a specific agent and thread
+export const useChunkedMessages = (agentId: string, threadId: string = "default") => {
+  const processor = getProcessor(agentId, threadId);
   const [messages, setMessages] = useState<Message[]>(processor.getMessages());
   const [chunks, setChunks] = useState<ResponseChunk[]>(processor.getChunks());
 
@@ -36,21 +36,21 @@ export const useChunkedMessages = (agentId: string) => {
     }
   }, []);
 
-  // Subscribe to changes for this agent
+  // Subscribe to changes for this agent+thread
   useEffect(() => {
     const updateState = () => {
       setMessages(JSON.parse(JSON.stringify(processor.getMessages())));
       setChunks(JSON.parse(JSON.stringify(processor.getChunks())));
     };
 
-    const subscribers = getSubscribers(agentId);
+    const subscribers = getSubscribers(agentId, threadId);
     subscribers.add(updateState);
     updateState();
 
     return () => {
       subscribers.delete(updateState);
     };
-  }, [agentId, processor]);
+  }, [agentId, threadId, processor]);
 
   const reset = useCallback(() => {
     processor.reset();
@@ -75,12 +75,13 @@ export const useChunkedMessages = (agentId: string) => {
     getChunks: () => processor.getChunks(),
     getToolResult,
     agentId,
+    threadId,
   };
 };
 
 // Hook specifically for tool results that will react to changes
 export const useToolResult = (agentId: string, toolCallId: string) => {
-  const processor = getProcessor(agentId);
+  const processor = getProcessor(agentId, toolCallId);
   const [result, setResult] = useState<ResponseChunk | null>(null);
   const [error, setError] = useState<ErrorChunk | null>(null);
 
@@ -96,7 +97,7 @@ export const useToolResult = (agentId: string, toolCallId: string) => {
     };
 
     // Add subscriber
-    const subscribers = getSubscribers(agentId);
+    const subscribers = getSubscribers(agentId, toolCallId);
     subscribers.add(updateResult);
 
     // Clean up

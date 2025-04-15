@@ -1,5 +1,7 @@
 import { generateText, streamText, tool, type LanguageModelV1, type ToolSet } from "ai";
 import { z } from "zod";
+import { createDirectReportDelegationTool } from "./tools";
+import { getCurrentDateTime } from "./tools/locale";
 import {
   createFileTool,
   getCurrentThemeTool,
@@ -13,8 +15,6 @@ import {
   setThemeTool,
   updateFileTool,
 } from "./tools/obsidian";
-import { createDirectReportDelegationTool } from "./tools";
-import { getCurrentDateTime } from "./tools/locale";
 
 export const DELEGATE_TO_AGENT_TOOL_NAME = "delegateToAgent";
 
@@ -220,7 +220,9 @@ handle a user request.`,
     // @ts-ignore for now - something about the streams
     agents,
     onSubAgentChunk: ({ agentId, toolCallId, chunk, context }) => {
-      context.getProcessor(agentId).appendChunk(chunk);
+      const processor = context.getProcessor(agentId, toolCallId);
+      processor.appendChunk(chunk);
+      console.log(agentId + ":" + toolCallId, chunk, processor);
     },
     tools: {
       getCurrentDateTime,
