@@ -1,10 +1,10 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { ShimmerText } from "./ShimmerText";
 import { DELEGATE_TO_AGENT_TOOL_NAME } from "../llm/agents";
 import { type Message } from "../llm/chunk-processor";
 import type { ToolCall } from "./MetaSidebar";
-import { useToolResult } from "../hooks/useChunkedMessages";
+import { useToolResult, useChunkedMessages } from "../hooks/useChunkedMessages";
 
 const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
   toolCallId,
@@ -12,13 +12,29 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
   args,
   callingAgentId,
 }) => {
-  const _name = toolName === DELEGATE_TO_AGENT_TOOL_NAME ? args.agentId : toolName;
+  const isSubAgentCall = toolName === DELEGATE_TO_AGENT_TOOL_NAME;
+
+  const _name = isSubAgentCall ? args.agentId : toolName;
   const { result, error, isLoading } = useToolResult(callingAgentId, toolCallId);
+  const [isOpen, setIsOpen] = useState(isLoading);
+
+  // For sub-agent calls, get the sub-agent's messages and chunks
+  const subAgentData = isSubAgentCall ? useChunkedMessages(args.agentId) : null;
+
+  useEffect(() => {
+    if (isLoading) {
+      setIsOpen(true);
+    } else if (!isLoading && !error) {
+      setIsOpen(false);
+    }
+  }, [isLoading, error]);
 
   return (
     <details
       data-id={toolCallId}
       className={`${toolCallId} meta-mb-4 meta-rounded-md meta-border meta-border-gray-200 dark:meta-border-gray-700`}
+      open={isOpen}
+      onToggle={(e) => setIsOpen(e.currentTarget.open)}
     >
       <summary className="meta-p-2 meta-cursor-pointer hover:meta-bg-gray-100 dark:hover:meta-bg-gray-800 meta-font-medium meta-flex meta-items-center meta-gap-2">
         {isLoading ? <ShimmerText text={_name} /> : _name}
@@ -37,18 +53,35 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
           </svg>
         )}
       </summary>
-      <code className="meta-p-3 meta-bg-gray-50 dark:meta-bg-gray-900 meta-block meta-rounded-b-md meta-overflow-x-auto meta-text-xs meta-whitespace-pre">
-        {JSON.stringify(args, null, 2)}
-      </code>
-      {result && (
-        <code className="meta-p-3 meta-bg-gray-100 dark:meta-bg-gray-800 meta-block meta-text-xs meta-overflow-x-auto meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-whitespace-pre">
-          {(() => {
-            const resultStr = JSON.stringify(result, null, 2);
-            const truncated = resultStr.length > 1000;
-            return truncated ? `${resultStr.slice(0, 1000)}... (truncated)` : resultStr;
-          })()}
-        </code>
+
+      {isSubAgentCall && subAgentData ? (
+        // Render a nested AgentResponseArea for sub-agent calls
+        <div className="meta-border-t meta-border-gray-200 dark:meta-border-gray-700">
+          <AgentResponseArea
+            isLoading={isLoading}
+            messages={subAgentData.messages}
+            chunks={subAgentData.chunks}
+            agentId={args.agentId}
+          />
+        </div>
+      ) : (
+        // Render the regular tool call view for normal tool calls
+        <>
+          <code className="meta-p-3 meta-bg-gray-50 dark:meta-bg-gray-900 meta-block meta-rounded-b-md meta-overflow-x-auto meta-text-xs meta-whitespace-pre">
+            {JSON.stringify(args, null, 2)}
+          </code>
+          {result && (
+            <code className="meta-p-3 meta-bg-gray-100 dark:meta-bg-gray-800 meta-block meta-text-xs meta-overflow-x-auto meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-whitespace-pre">
+              {(() => {
+                const resultStr = JSON.stringify(result, null, 2);
+                const truncated = resultStr.length > 1000;
+                return truncated ? `${resultStr.slice(0, 1000)}... (truncated)` : resultStr;
+              })()}
+            </code>
+          )}
+        </>
       )}
+
       {error && (
         <code className="meta-p-3 meta-bg-gray-100 dark:meta-bg-gray-800 meta-block meta-text-xs meta-overflow-x-auto meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-whitespace-pre">
           {JSON.stringify(error, null, 2)}
@@ -150,6 +183,8 @@ export const AgentResponseArea: React.FC<AgentResponseAreaProps> = ({
 
   return (
     <div
+      data-agent-id={agentId}
+      data-testid="AgentResponseArea"
       className="meta-flex-1 meta-overflow-y-auto meta-w-full meta-h-full meta-p-4"
       ref={responseRef}
     >
