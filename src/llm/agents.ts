@@ -136,7 +136,10 @@ export const createObsidianContentAgent = ({ llm }: { llm: LanguageModelV1 }) =>
     user's Obsidian vault. 
     Your specialty is managing the content files in the
     Obsidian vault. These are usually markdown or plain text files, but Obsidian
-    supports a broad range of content.`,
+    supports a broad range of content.
+    
+    You do NOT manage themes or plugins. You're concerned ONLY with the vault
+    content created directly by the user.`,
     model: llm,
     contextSchema: obsidianToolContextSchema,
     tools: {

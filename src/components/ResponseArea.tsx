@@ -5,6 +5,14 @@ import { DELEGATE_TO_AGENT_TOOL_NAME } from "../llm/agents";
 import { type Message } from "../llm/chunk-processor";
 import type { ToolCall } from "./MetaSidebar";
 import { useToolResult, useChunkedMessages } from "../hooks/useChunkedMessages";
+import classNames from "classnames";
+
+const capitalizeWords = (str: string) => {
+  return str
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
 
 const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
   toolCallId,
@@ -14,7 +22,7 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
 }) => {
   const isSubAgentCall = toolName === DELEGATE_TO_AGENT_TOOL_NAME;
 
-  const _name = isSubAgentCall ? args.agentId : toolName;
+  const displayName = isSubAgentCall ? capitalizeWords(args.agentId) : toolName;
   const { result, error, isLoading } = useToolResult(callingAgentId, toolCallId);
   const [isOpen, setIsOpen] = useState(isLoading);
 
@@ -32,12 +40,35 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
   return (
     <details
       data-id={toolCallId}
-      className={`${toolCallId} meta-mb-4 meta-rounded-md meta-border meta-border-gray-200 dark:meta-border-gray-700`}
+      className={`${toolCallId} tool-call-container meta-rounded-lg meta-border meta-border-solid meta-border-gray-200 dark:meta-border-gray-700 meta-mt-2 meta-bg-black/10 dark:meta-bg-white/10`}
       open={isOpen}
       onToggle={(e) => setIsOpen(e.currentTarget.open)}
     >
-      <summary className="meta-p-2 meta-cursor-pointer hover:meta-bg-gray-100 dark:hover:meta-bg-gray-800 meta-font-medium meta-flex meta-items-center meta-gap-2">
-        {isLoading ? <ShimmerText text={_name} /> : _name}
+      <summary
+        className={classNames(
+          "meta-p-2 meta-cursor-pointer hover:meta-bg-gray-100 dark:hover:meta-bg-gray-800 meta-font-medium meta-flex meta-items-center meta-gap-2 meta-border-b meta-border-gray-200 dark:meta-border-gray-700",
+          {
+            "meta-border-b-0": !isOpen,
+            "meta-border-b-1 meta-border-solid": isOpen,
+          }
+        )}
+      >
+        {/* Terminal icon */}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="meta-h-4 meta-w-4 meta-mr-2 meta-text-gray-500 dark:meta-text-gray-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 9l3 3-3 3m5 0h3"
+          />
+        </svg>
+        {isLoading ? <ShimmerText text={displayName} /> : displayName}
         {error && (
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -101,7 +132,7 @@ const MessageBubble: React.FC<{ message: Message; isLoading: boolean; agentId: s
 
   return (
     <div
-      className={`meta-mb-4 ${
+      className={`meta-mb-2 ${
         isUser
           ? "meta-ml-auto meta-max-w-[85%] meta-border meta-border-gray-200 dark:meta-border-gray-700"
           : "meta-w-full"
@@ -173,7 +204,7 @@ export const AgentResponseArea: React.FC<AgentResponseAreaProps> = ({
   // Initial loading state with no messages
   if (isLoading && chunks.length === 0 && messages.length === 0) {
     return (
-      <div className="meta-flex-1 meta-overflow-y-auto meta-w-full meta-h-full meta-p-4">
+      <div className="meta-flex-1 meta-overflow-y-auto meta-w-full meta-h-full meta-p-2">
         <div className="meta-text-center meta-py-2 meta-font-medium">
           <ShimmerText text="Processing..." />
         </div>
@@ -185,7 +216,7 @@ export const AgentResponseArea: React.FC<AgentResponseAreaProps> = ({
     <div
       data-agent-id={agentId}
       data-testid="AgentResponseArea"
-      className="meta-flex-1 meta-overflow-y-auto meta-w-full meta-h-full meta-p-4"
+      className="meta-flex-1 meta-overflow-y-auto meta-w-full meta-h-full meta-p-2"
       ref={responseRef}
     >
       {/* NOTE: "tool" messages are not displayed. instead the tool-call is displayed and we tack the result onto the call site when complete */}
