@@ -1,24 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ChunkProcessor, type Message } from "../llm/chunk-processor";
 import type { ResponseChunk, ErrorChunk } from "../components/types";
-import { getProcessor, processors } from "./state";
-
-// Create a Map of subscribers for different agents
-const subscribersMap = new Map<string, Set<() => void>>();
-
-// Helper function to get or create subscribers for an agent
-const getSubscribers = (agentId: string): Set<() => void> => {
-  if (!subscribersMap.has(agentId)) {
-    subscribersMap.set(agentId, new Set());
-  }
-  return subscribersMap.get(agentId)!;
-};
-
-// Function to notify all subscribers of changes for a specific agent
-const notifySubscribers = (agentId: string) => {
-  const subscribers = getSubscribers(agentId);
-  subscribers.forEach((subscriber) => subscriber());
-};
+import { getProcessor, processors, getSubscribers } from "./state";
 
 // Plain utility function to find a tool result
 export const findToolResult = (
@@ -60,31 +43,19 @@ export const useChunkedMessages = (agentId: string) => {
       setChunks(JSON.parse(JSON.stringify(processor.getChunks())));
     };
 
-    // Add subscriber
     const subscribers = getSubscribers(agentId);
     subscribers.add(updateState);
-
-    // Initial update
     updateState();
 
-    // Clean up subscriber on unmount
     return () => {
       subscribers.delete(updateState);
     };
   }, [agentId, processor]);
 
-  const update = useCallback(() => {
-    setMessages(JSON.parse(JSON.stringify(processor.getMessages())));
-    setChunks(JSON.parse(JSON.stringify(processor.getChunks())));
-    notifySubscribers(agentId);
-  }, [agentId, processor]);
-
   const reset = useCallback(() => {
     processor.reset();
-    update();
-  }, [processor, update]);
+  }, [processor]);
 
-  // Function to find a tool result using the current chunks
   const getToolResult = useCallback(
     (toolCallId: string) => findToolResult(chunks, toolCallId),
     [chunks]
@@ -93,11 +64,9 @@ export const useChunkedMessages = (agentId: string) => {
   return {
     appendMessage: (message: Message) => {
       processor.appendMessage(message);
-      update();
     },
     appendResponseChunk: (chunk: ResponseChunk) => {
       processor.appendChunk(chunk);
-      update();
     },
     messages,
     chunks,
