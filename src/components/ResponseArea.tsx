@@ -6,15 +6,14 @@ import { type Message } from "../llm/chunk-processor";
 import type { ToolCall } from "./MetaSidebar";
 import { useToolResult } from "../hooks/useChunkedMessages";
 
-interface ResponseAreaProps {
-  chunks: any[];
-  isLoading: boolean;
-  messages?: Message[]; // Conversation history
-}
-
-const ToolCallView: React.FC<ToolCall> = ({ toolCallId, toolName, args }) => {
+const ToolCallView: React.FC<ToolCall & { callingAgentId: string }> = ({
+  toolCallId,
+  toolName,
+  args,
+  callingAgentId,
+}) => {
   const _name = toolName === DELEGATE_TO_AGENT_TOOL_NAME ? args.agentId : toolName;
-  const { result, error, isLoading } = useToolResult(toolCallId);
+  const { result, error, isLoading } = useToolResult(callingAgentId, toolCallId);
 
   return (
     <details
@@ -60,9 +59,10 @@ const ToolCallView: React.FC<ToolCall> = ({ toolCallId, toolName, args }) => {
 };
 
 // Component to display each message in the conversation
-const MessageBubble: React.FC<{ message: Message; isLoading: boolean }> = ({
+const MessageBubble: React.FC<{ message: Message; isLoading: boolean; agentId: string }> = ({
   message,
   isLoading,
+  agentId,
 }) => {
   const isUser = message.role === "user";
 
@@ -106,7 +106,7 @@ const MessageBubble: React.FC<{ message: Message; isLoading: boolean }> = ({
             {message.content
               ?.filter((c) => c.type === "tool-call")
               .map((c) => {
-                return <ToolCallView key={c.toolCallId} {...c} />;
+                return <ToolCallView key={c.toolCallId} {...c} callingAgentId={agentId} />;
               })}
           </>
         )}
@@ -115,10 +115,18 @@ const MessageBubble: React.FC<{ message: Message; isLoading: boolean }> = ({
   );
 };
 
-export const ResponseArea: React.FC<ResponseAreaProps> = ({
+interface AgentResponseAreaProps {
+  chunks: any[];
+  isLoading: boolean;
+  messages?: Message[]; // Conversation history
+  agentId: string;
+}
+
+export const AgentResponseArea: React.FC<AgentResponseAreaProps> = ({
   isLoading,
   messages = [],
   chunks = [],
+  agentId,
 }) => {
   const responseRef = useRef<HTMLDivElement>(null);
 
@@ -153,6 +161,7 @@ export const ResponseArea: React.FC<ResponseAreaProps> = ({
             key={message.id || `msg-${index}`}
             message={message}
             isLoading={isLoading}
+            agentId={agentId}
           />
         ))}
     </div>

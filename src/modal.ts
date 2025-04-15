@@ -2,6 +2,7 @@ import { type App, Component, MarkdownRenderer, Modal } from "obsidian";
 
 import type { MetaPlugin as IMetaPlugin } from "./plugin";
 import { generateText, streamText } from "ai";
+import { getProcessor } from "./hooks/state";
 
 export class SampleModal extends Modal {
   plugin: IMetaPlugin;
@@ -61,7 +62,7 @@ export class SampleModal extends Modal {
           },
 
           // @todo I need to update the types to make this mandatory IF PROVIDED at the top level agent instantiation
-          { app: this.app }
+          { app: this.app, plugin: this.plugin, getProcessor }
         );
 
         let resultEl = resultContainer.createDiv();

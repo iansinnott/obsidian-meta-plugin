@@ -1,14 +1,13 @@
 import type { MetaPlugin } from "@/src/plugin";
 import { tool, type ToolExecutionOptions } from "ai";
 import type { App } from "obsidian";
-import path from "path";
 import { z } from "zod";
 import type { ChunkProcessor } from "../chunk-processor";
 
 export const obsidianToolContextSchema = z.object({
   app: z.custom<App>(),
   plugin: z.custom<MetaPlugin>(),
-  chunkProcessor: z.custom<ChunkProcessor>(),
+  getProcessor: z.function().args(z.string()).returns(z.custom<ChunkProcessor>()),
 });
 
 export type ObsidianContext = z.infer<typeof obsidianToolContextSchema>;

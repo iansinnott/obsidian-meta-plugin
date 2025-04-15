@@ -5,6 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { MetaSidebar } from "./components/MetaSidebar";
 import { AppProvider } from "./hooks/useApp";
 import "./components/metaSidebar.css";
+import { getProcessor } from "./hooks/state";
 
 // Define a unique view type for the sidebar
 export const META_SIDEBAR_VIEW_TYPE = "meta-sidebar-view";
@@ -53,7 +54,7 @@ export class MetaSidebarView extends ItemView {
     this.root.render(
       React.createElement(
         AppProvider,
-        { value: { app, plugin } },
+        { value: { app, plugin, getProcessor } },
         React.createElement(MetaSidebar, {
           plugin: this.plugin,
           component: this.component,

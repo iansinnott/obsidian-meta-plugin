@@ -1,5 +1,3 @@
-import { generateId } from "ai";
-
 interface TextPart {
   type: "text";
   text: string;

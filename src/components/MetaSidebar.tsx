@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Component } from "obsidian";
 import { PromptInput } from "./PromptInput";
-import { ResponseArea } from "./ResponseArea";
+import { AgentResponseArea } from "./ResponseArea";
 import { useApp } from "../hooks/useApp";
 import type { ResponseChunk } from "./types";
 import type { MetaPlugin as IMetaPlugin } from "../plugin";
@@ -21,11 +21,11 @@ export interface ToolCall {
   result?: any;
 }
 
-export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) => {
+export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin }) => {
   const ctx = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const { messages, chunks, appendMessage, appendResponseChunk, reset, getMessages, getChunks } =
-    useChunkedMessages();
+    useChunkedMessages(plugin.agent?.name);
 
   const handleSubmit = useCallback(
     async (prompt: string) => {
@@ -119,10 +119,11 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
       </div>
 
       <div className="meta-flex-1 meta-overflow-hidden meta-flex meta-flex-col">
-        <ResponseArea
+        <AgentResponseArea
           isLoading={isLoading}
           messages={messages} // Pass the conversation to display message history
           chunks={chunks}
+          agentId={plugin.agent?.name}
         />
       </div>
 

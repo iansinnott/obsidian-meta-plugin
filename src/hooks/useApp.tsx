@@ -1,11 +1,13 @@
 import { createContext, useContext } from "react";
 import type { App } from "obsidian";
 import type { MetaPlugin } from "../plugin";
+import type { ChunkProcessor } from "../llm/chunk-processor";
 
 // Define the type for the context value
 export interface AppContextType {
   app: App;
   plugin: MetaPlugin;
+  getProcessor: (agentId: string) => ChunkProcessor;
 }
 
 // Create a context to hold both the Obsidian App instance and plugin

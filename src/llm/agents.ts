@@ -216,6 +216,9 @@ handle a user request.`,
     contextSchema: obsidianToolContextSchema,
     // @ts-ignore for now - something about the streams
     agents,
+    onSubAgentChunk: ({ agentId, toolCallId, chunk, context }) => {
+      context.getProcessor(agentId).appendChunk(chunk);
+    },
     tools: {
       getCurrentDateTime,
       obsidianAPITool,
