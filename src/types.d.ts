@@ -5,12 +5,14 @@ declare module "obsidian" {
   interface Vault {
     config: {
       cssTheme: string;
-      /** Unclear what the possible values are. On my system 'obsidian' means 'dark' and 'moonstone' means 'light'. */
-      theme?: "system" | "obsidian" | string;
+      /** 'obsidian' means 'dark' and 'moonstone' means 'light'. Not sure what it means when undefined. Implicitly 'system'? */
+      theme?: "system" | "obsidian" | "moonstone";
     };
   }
 
   interface App {
+    changeTheme: (theme: "obsidian" | "moonstone" | "system") => void;
+
     // Custom CSS module
     customCss?: {
       theme: string;
@@ -21,9 +23,13 @@ declare module "obsidian" {
           version?: string;
           authorUrl?: string;
           dir?: string;
-          // Add other theme properties as needed
         };
       };
+
+      /** Get's the configured folder where all themes are stored. */
+      getThemeFolder(): Promise<string>;
+      /** Get's the configured folder where all snippets are stored. */
+      getSnippetFolder(): Promise<string>;
 
       /** The names of css snippet files installed in the current vault. Does not include the .css extension. Does not include active status. */
       snippets: string[];

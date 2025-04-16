@@ -212,8 +212,8 @@ export const createObsidianThemesAgent = ({
     settings,
     tools: {
       getCurrentTheme: getCurrentThemeTool,
-      listAvaialbleThemes: listAvailableThemesTool,
-      setThemeTool,
+      listAvailableThemes: listAvailableThemesTool,
+      setTheme: setThemeTool,
     },
   });
 };

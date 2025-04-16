@@ -330,18 +330,21 @@ export const obsidianAPITool = tool({
 });
 
 export const getCurrentThemeTool = tool({
-  description: "Get the currently active Obsidian theme.",
+  description:
+    "Get the currently active Obsidian theme. Returns the theme name, light/dark mode, and the CSS classes applied to the body.",
   parameters: z.object({}),
   execute: async (_, options: ToolExecutionOptions & { context: ObsidianContext }) => {
     const { app } = options.context;
 
     try {
-      const activeTheme = app.customCss?.theme || app.vault.config.cssTheme;
+      const activeTheme = app.vault.config.cssTheme;
+      const lightDarkMode = app.vault.config.theme;
 
       return {
         success: true,
         theme: {
           activeTheme,
+          lightDarkMode,
           cssClasses: Array.from(document.body.classList).join(" "),
         },
       };
@@ -391,18 +394,36 @@ export const listAvailableThemesTool = tool({
 });
 
 export const setThemeTool = tool({
-  description:
-    "Set the currently active Obsidian theme. Only installed themes can be set. First list available themes if unsure. If the user requests a theme that is not available tell them as much.",
+  description: `
+    Set the currently active Obsidian theme. Only installed themes can be set. 
+    Set light or dark mode (Optional).
+    First list available themes if unsure. 
+    If the user requests a theme that is not available tell them as much.
+  `,
   parameters: z.object({
     themeName: z.string().describe("The name of the theme to set. Must already be installed."),
+    lightDarkMode: z
+      .enum(["light", "dark"])
+      .optional()
+      .describe(
+        "The light/dark mode to set the theme to. In Obsidian 'light' corresponds to 'moonstone' and 'dark' corresponds to 'obsidian'."
+      ),
   }),
-  execute: async ({ themeName }, options: ToolExecutionOptions & { context: ObsidianContext }) => {
+  execute: async (
+    { themeName, lightDarkMode },
+    options: ToolExecutionOptions & { context: ObsidianContext }
+  ) => {
     const { app } = options.context;
     if (!app.customCss) {
       throw new Error("No custom CSS found");
     }
 
     app.customCss.setTheme(themeName);
+
+    if (lightDarkMode) {
+      const newMode = { light: "moonstone", dark: "obsidian" }[lightDarkMode];
+      app.changeTheme(newMode as "obsidian" | "moonstone" | "system");
+    }
 
     return { success: true, message: "Theme set successfully" };
   },
