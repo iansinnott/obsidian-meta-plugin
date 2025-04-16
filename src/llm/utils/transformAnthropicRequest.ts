@@ -38,7 +38,6 @@ export function transformAnthropicRequest(options: RequestInit): RequestInit {
       body: JSON.stringify(updatedBody),
     };
   } catch (error) {
-    // If JSON parsing fails, return original options
     console.error("Error transforming Anthropic request:", error);
     return options;
   }
