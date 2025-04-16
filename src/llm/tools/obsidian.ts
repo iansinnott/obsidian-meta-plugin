@@ -1,7 +1,8 @@
+// NOTE: Avoid importing directly from obsidian in this file, since it only works in Obisdian and thus breaks tests
+import type { App, MarkdownView, TFile } from "obsidian";
+
 import type { MetaPlugin } from "@/src/plugin";
-import { type TFile, MarkdownView } from "obsidian";
 import { tool, type ToolExecutionOptions } from "ai";
-import type { App } from "obsidian";
 import { z } from "zod";
 import type { ChunkProcessor } from "../chunk-processor";
 
@@ -458,17 +459,16 @@ export const listOpenFilesTool = tool({
 
     function getOpenFiles(): TFile[] {
       const openFiles: TFile[] = [];
-
-      // Iterate over all leaves in the workspace
-      app.workspace.iterateAllLeaves((leaf) => {
-        // Check if the leaf's view is a MarkdownView
-        if (leaf.view instanceof MarkdownView) {
-          const file = leaf.view.file;
-          if (file && !openFiles.includes(file)) {
-            openFiles.push(file);
-          }
-        }
+      const leaves = app.workspace.getLeavesOfType("markdown").filter((x) => {
+        return (x.view as MarkdownView).file !== null;
       });
+
+      for (const leaf of leaves) {
+        const file = (leaf.view as MarkdownView).file;
+        if (file) {
+          openFiles.push(file);
+        }
+      }
 
       return openFiles;
     }
