@@ -67,8 +67,12 @@ export class ChunkProcessor {
       case "tool-result":
         this.addToolResult(chunk);
         break;
+      case "error":
       case "step-finish":
         this.finalizeCurrentMessage();
+        if (chunk.type === "error") {
+          console.warn(`[ChunkProcessor] error:`, chunk);
+        }
         break;
       case "finish":
         // Nothing to do on final finish

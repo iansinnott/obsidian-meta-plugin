@@ -6,6 +6,7 @@ import { createTeamManagerAgent } from "./llm/agents";
 import { SampleModal } from "./modal";
 import { DEFAULT_SETTINGS, MetaSettingTab } from "./settings";
 import { META_SIDEBAR_VIEW_TYPE, MetaSidebarView, activateSidebarView } from "./sidebar";
+import { transformAnthropicRequest } from "./llm/utils/transformAnthropicRequest";
 
 export class MetaPlugin extends Plugin {
   settings: typeof DEFAULT_SETTINGS;
@@ -63,6 +64,15 @@ export class MetaPlugin extends Plugin {
           headers: {
             "anthropic-dangerous-direct-browser-access": "true",
           },
+          fetch: Object.assign(
+            (url: string, options: RequestInit) => {
+              const transformedOptions = options ? transformAnthropicRequest(options) : options;
+              return fetch(url, transformedOptions);
+            },
+            {
+              preconnect: fetch.preconnect,
+            }
+          ),
         })
       : createOpenAI({
           apiKey: this.settings.apiKey,
@@ -79,6 +89,13 @@ export class MetaPlugin extends Plugin {
         maxSteps: 20,
         maxRetries: 2,
         maxTokens: 8000,
+      },
+      obsidianPaths: {
+        vaultPath: this.app.vault.adapter.getBasePath(),
+        configPath: this.app.vault.configDir,
+        themesPath: this.app.customCss?.getThemeFolder(),
+        snippetsPath: this.app.customCss?.getSnippetsFolder(),
+        pluginsPath: this.app.plugins?.getPluginFolder(),
       },
     });
   }

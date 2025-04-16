@@ -2,6 +2,7 @@ import { generateText, streamText, tool, type LanguageModelV1, type ToolSet } fr
 import { z } from "zod";
 import { createDirectReportDelegationTool } from "./tools";
 import { getCurrentDateTime } from "./tools/locale";
+import { createFileEditorTool, type FileEditorContext } from "./tools/fileEditor";
 import {
   createFileTool,
   getCurrentFileTool,
@@ -22,6 +23,7 @@ import {
 
 export const DELEGATE_TO_AGENT_TOOL_NAME = "delegateToAgent";
 export const OBSIDIAN_API_TOOL_NAME = "obsidianAPITool";
+export const FILE_EDITOR_TOOL_NAME = "str_replace_editor";
 
 interface AgentArgs<
   TTools extends ToolSet,
@@ -186,13 +188,21 @@ export const createObsidianContentAgent = ({
 export const createObsidianThemesAgent = ({
   llm,
   settings,
+  obsidianPaths,
 }: {
   llm: LanguageModelV1;
   settings?: AgentSettings;
+  obsidianPaths: ObsidianPaths;
 }) => {
   return new Agent({
     name: "obsidian theme manager",
-    instructions: `You are an AI agent that specializes in themeing Obsidian and managing the user's exisdting themes.`,
+    instructions: `
+You are an AI agent that specializes in themeing Obsidian and managing the
+user's existing themes and snippets.
+
+You can help users understand their installed themes, enable/disable themes,
+and provide information about theme functionality.
+    `,
     model: llm,
     contextSchema: obsidianToolContextSchema,
     settings,
@@ -238,18 +248,130 @@ the tabs in their Obsidian window you should use the obsidian API directly.
   });
 };
 
-export const createTeamManagerAgent = ({
+export interface ObsidianPaths {
+  vaultPath: string;
+  configPath: string;
+  themesPath?: string;
+  snippetsPath?: string;
+  pluginsPath?: string;
+}
+
+// @todo
+export const createObsidianPluginsAgent = ({
   llm,
   settings,
+  obsidianPaths,
 }: {
   llm: LanguageModelV1;
   settings?: AgentSettings;
+  obsidianPaths: ObsidianPaths;
+}) => {
+  return new Agent({
+    name: "obsidian plugin manager",
+    instructions: `
+You are an AI agent that specializes in managing Obsidian plugins.
+You can help users understand their installed plugins, enable/disable plugins,
+and provide information about plugin functionality.
+    `,
+    model: llm,
+    contextSchema: obsidianToolContextSchema,
+    settings,
+    tools: {
+      [OBSIDIAN_API_TOOL_NAME]: obsidianAPITool,
+    },
+  });
+};
+
+/**
+ * Create an agent that specializes in editing files through LLM-guided operations
+ * @param param0 Configuration options
+ * @returns A file editor agent
+ */
+export const createFileEditorAgent = ({
+  llm,
+  settings,
+  obsidianPaths,
+  additionalInstructions = "",
+}: {
+  llm: LanguageModelV1;
+  settings?: AgentSettings;
+  obsidianPaths: ObsidianPaths;
+  additionalInstructions?: string;
+}) => {
+  return new Agent({
+    name: "file editor",
+    instructions: `You are an AI agent that specializes in reading and editing files and directories. You can do things like:
+
+- View file contents
+- Create new files
+- Replace text within files
+- Insert text at specific lines
+- Undo edits when needed
+
+Your primary responsibility is to help users manage their files effectively and safely.
+Always confirm changes were made successfully and provide informative error messages when issues occur.
+
+All files you work with will be in the user's Obsidian vault. Every file or directory path you request will be relative to the user's Obsidian vault.
+
+For example, if a user's vault is located at "/Users/john/Documents/Obsidian
+Vault" and they want you to edit the file "example.md" in the root of their
+vault, they would simply provide you with the path "example.md".
+  
+Alternatively, if you want to edit a nested file, you can provide a path like
+"notes/example.md" which would be the file "example.md" in the "notes" folder
+within the user's vault.
+
+Here are some paths that may come in handy: 
+
+- Config Path: ${obsidianPaths.configPath}
+- Themes Path: ${obsidianPaths.themesPath}
+- Snippets Path: ${obsidianPaths.snippetsPath}
+- Plugins Path: ${obsidianPaths.pluginsPath}
+
+Of course content files can be placed anywhere within the vault path.
+
+IMPORTANT: All paths you provide should be relative paths. They will be interpreted as relative to the user's Obsidian vault.
+
+DEVELOPERS NOTE: Windows users will have a different path structure. Error messages should tell you if you're on a Windows system.
+
+Additional instructions:
+
+${additionalInstructions}
+`,
+    model: llm,
+    settings,
+    tools: {
+      [FILE_EDITOR_TOOL_NAME]: createFileEditorTool({
+        basePath: obsidianPaths.vaultPath,
+      }),
+    },
+  });
+};
+
+export const createTeamManagerAgent = ({
+  llm,
+  settings,
+  obsidianPaths,
+}: {
+  llm: LanguageModelV1;
+  settings?: AgentSettings;
+  obsidianPaths: ObsidianPaths;
 }) => {
   // prettier-ignore
   const agents = [
-    createObsidianContentAgent({ llm, settings }),
-    createObsidianThemesAgent({ llm, settings }),
-    createObsidianWorkspaceAgent({ llm, settings }),
+    createFileEditorAgent({
+      llm,
+      settings,
+      obsidianPaths,
+      additionalInstructions: `
+  Your expected job scope is to perform CRUD operations on the user's
+  snippets. Help the user acheive the look and feel they desire with their
+  Obsidian UI.
+      `,
+    }),
+    // createObsidianContentAgent({ llm, settings }),
+    // createObsidianThemesAgent({ llm, settings, obsidianPaths }),
+    // createObsidianWorkspaceAgent({ llm, settings }),
   ];
 
   const agent = new Agent({
