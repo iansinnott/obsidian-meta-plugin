@@ -1,8 +1,9 @@
 import { generateText, streamText, tool, type LanguageModelV1, type ToolSet } from "ai";
 import { z } from "zod";
+
 import { createDirectReportDelegationTool } from "./tools";
+import { createFileEditorTool } from "./tools/fileEditor";
 import { getCurrentDateTime } from "./tools/locale";
-import { createFileEditorTool, type FileEditorContext } from "./tools/fileEditor";
 import {
   createFileTool,
   getCurrentFileTool,
@@ -371,7 +372,7 @@ export const createTeamManagerAgent = ({
     }),
     // createObsidianContentAgent({ llm, settings }),
     // createObsidianThemesAgent({ llm, settings, obsidianPaths }),
-    // createObsidianWorkspaceAgent({ llm, settings }),
+    createObsidianWorkspaceAgent({ llm, settings }),
   ];
 
   const agent = new Agent({
