@@ -1,3 +1,5 @@
+import { ToolExecutionError } from "ai";
+
 export type TextDeltaChunk = {
   type: "text-delta";
   textDelta: string;
@@ -19,13 +21,7 @@ export type ToolResultChunk = {
 
 export type ErrorChunk = {
   type: "error";
-  error: {
-    name: string;
-    cause: any;
-    toolArgs: Record<string, any>;
-    toolName: string;
-    toolCallId: string;
-  };
+  error: ToolExecutionError;
 };
 
 export type ResponseChunk = TextDeltaChunk | ToolCallChunk | ToolResultChunk | ErrorChunk;
