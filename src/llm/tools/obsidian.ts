@@ -1,4 +1,5 @@
 import type { MetaPlugin } from "@/src/plugin";
+import { type TFile, MarkdownView } from "obsidian";
 import { tool, type ToolExecutionOptions } from "ai";
 import type { App } from "obsidian";
 import { z } from "zod";
@@ -426,5 +427,71 @@ export const setThemeTool = tool({
     }
 
     return { success: true, message: "Theme set successfully" };
+  },
+});
+
+export const listLastOpenFilesTool = tool({
+  description:
+    "List all files that have been recently opened in Obsidian. Calls app.workspace.getLastOpenFiles under the hood but returns a list of file objects.",
+  parameters: z.object({}),
+  execute: async (_, options: ToolExecutionOptions & { context: ObsidianContext }) => {
+    const { app } = options.context;
+    const files = app.workspace
+      .getLastOpenFiles()
+      .map((x) => app.vault.getFileByPath(x))
+      .filter((x) => x !== null)
+      .map((x) => ({
+        path: x.path,
+        mtime: x.stat.mtime,
+        size: x.stat.size,
+      }));
+    return files;
+  },
+});
+
+export const listOpenFilesTool = tool({
+  description:
+    "List all open files in Obsidian. These files are open tabs in the user's Obsidian editor.",
+  parameters: z.object({}),
+  execute: async (_, options: ToolExecutionOptions & { context: ObsidianContext }) => {
+    const { app } = options.context;
+
+    function getOpenFiles(): TFile[] {
+      const openFiles: TFile[] = [];
+
+      // Iterate over all leaves in the workspace
+      app.workspace.iterateAllLeaves((leaf) => {
+        // Check if the leaf's view is a MarkdownView
+        if (leaf.view instanceof MarkdownView) {
+          const file = leaf.view.file;
+          if (file && !openFiles.includes(file)) {
+            openFiles.push(file);
+          }
+        }
+      });
+
+      return openFiles;
+    }
+
+    const files = getOpenFiles();
+
+    return files.map((x) => ({
+      path: x.path,
+      mtime: x.stat.mtime,
+      size: x.stat.size,
+    }));
+  },
+});
+
+export const getCurrentFileTool = tool({
+  description:
+    "Get the current file that the user is editing in Obsidian. Can be null, which indicates the user has no files open.",
+  parameters: z.object({}),
+  execute: async (_, options: ToolExecutionOptions & { context: ObsidianContext }) => {
+    const { app } = options.context;
+    const file = app.workspace.getActiveFile();
+    return {
+      file: file ? { path: file.path, mtime: file.stat.mtime, size: file.stat.size } : null,
+    };
   },
 });

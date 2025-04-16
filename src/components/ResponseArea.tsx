@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useChunkedMessages, useToolResult } from "../hooks/useChunkedMessages";
-import { DELEGATE_TO_AGENT_TOOL_NAME } from "../llm/agents";
+import { DELEGATE_TO_AGENT_TOOL_NAME, OBSIDIAN_API_TOOL_NAME } from "../llm/agents";
 import { type Message } from "../llm/chunk-processor";
 import type { ToolCall } from "./MetaSidebar";
 import { ShimmerText } from "./ShimmerText";
@@ -122,23 +122,44 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string; threadId: stri
             ) : (
               // Render the regular tool call view for normal tool calls
               <>
-                <code className="meta-p-3 meta-bg-gray-50 dark:meta-bg-gray-900 meta-block meta-rounded-b-md meta-overflow-x-auto meta-text-xs meta-whitespace-pre">
-                  {JSON.stringify(args, null, 2)}
-                </code>
+                <div className="tool-call-args">
+                  {(() => {
+                    if (toolName === OBSIDIAN_API_TOOL_NAME) {
+                      return (
+                        <pre className="meta-bg-gray-50 dark:meta-bg-gray-900 meta-p-2 meta-rounded meta-overflow-x-auto meta-text-xs meta-my-2">
+                          {args.functionBody}
+                        </pre>
+                      );
+                    }
+
+                    const argsStr = JSON.stringify(args, null, 2);
+                    const truncated = argsStr.length > 1000;
+                    return (
+                      <code className="meta-bg-gray-50 dark:meta-bg-gray-900 meta-block meta-rounded-b-md meta-overflow-x-auto meta-text-xs meta-whitespace-pre meta-text-gray-800 dark:meta-text-gray-200">
+                        {"→ " + (truncated ? `${argsStr.slice(0, 1000)}... (truncated)` : argsStr)}
+                      </code>
+                    );
+                  })()}
+                </div>
                 {result && (
-                  <code className="meta-p-3 meta-bg-gray-100 dark:meta-bg-gray-800 meta-block meta-text-xs meta-overflow-x-auto meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-whitespace-pre">
+                  <div className="tool-call-result">
                     {(() => {
-                      const resultStr = JSON.stringify(result, null, 2);
+                      const resultStr = JSON.stringify(result.result, null, 2);
                       const truncated = resultStr.length > 1000;
-                      return truncated ? `${resultStr.slice(0, 1000)}... (truncated)` : resultStr;
+                      return (
+                        <pre>
+                          {"← " +
+                            (truncated ? `${resultStr.slice(0, 1000)}... (truncated)` : resultStr)}
+                        </pre>
+                      );
                     })()}
-                  </code>
+                  </div>
                 )}
               </>
             )}
 
             {error && (
-              <code className="meta-p-3 meta-bg-gray-100 dark:meta-bg-gray-800 meta-block meta-text-xs meta-overflow-x-auto meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-whitespace-pre">
+              <code className="meta-p-3 meta-bg-red-50 dark:meta-bg-red-900/20 meta-block meta-text-xs meta-overflow-x-auto meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-whitespace-pre meta-text-red-800 dark:meta-text-red-200">
                 {JSON.stringify(error, null, 2)}
               </code>
             )}

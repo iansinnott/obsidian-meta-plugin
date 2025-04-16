@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import type { ErrorChunk, ResponseChunk } from "../components/types";
+import type { ErrorChunk, ResponseChunk, ToolResultChunk } from "../components/types";
 import { type Message } from "../llm/chunk-processor";
 import { getProcessor, getProcessorsMap, getSubscribers } from "./state";
 
@@ -8,9 +8,11 @@ import { getProcessor, getProcessorsMap, getSubscribers } from "./state";
 export const findToolResult = (
   chunks: ResponseChunk[],
   toolCallId: string
-): ResponseChunk | null => {
+): ToolResultChunk | null => {
   return (
-    chunks.find((chunk) => chunk.type === "tool-result" && chunk.toolCallId === toolCallId) || null
+    chunks
+      .filter((chunk) => chunk.type === "tool-result")
+      .find((chunk) => chunk.toolCallId === toolCallId) || null
   );
 };
 
@@ -102,7 +104,7 @@ export const useChunkedMessages = (agentId: string, threadId: string = "default"
  */
 export const useToolResult = (agentId: string, threadId: string, toolCallId: string) => {
   const processor = getProcessor(agentId, threadId);
-  const [result, setResult] = useState<ResponseChunk | null>(null);
+  const [result, setResult] = useState<ToolResultChunk | null>(null);
   const [error, setError] = useState<ErrorChunk | null>(null);
 
   useEffect(() => {

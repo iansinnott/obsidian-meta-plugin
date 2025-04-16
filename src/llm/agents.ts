@@ -4,9 +4,12 @@ import { createDirectReportDelegationTool } from "./tools";
 import { getCurrentDateTime } from "./tools/locale";
 import {
   createFileTool,
+  getCurrentFileTool,
   getCurrentThemeTool,
   listAvailableThemesTool,
   listFilesTool,
+  listLastOpenFilesTool,
+  listOpenFilesTool,
   obsidianAPITool,
   obsidianToolContextSchema,
   readFilesTool,
@@ -17,6 +20,7 @@ import {
 } from "./tools/obsidian";
 
 export const DELEGATE_TO_AGENT_TOOL_NAME = "delegateToAgent";
+export const OBSIDIAN_API_TOOL_NAME = "obsidianAPITool";
 
 interface AgentArgs<
   TTools extends ToolSet,
@@ -178,25 +182,6 @@ export const createObsidianContentAgent = ({
   });
 };
 
-export const createObsidianAPIAgent = ({
-  llm,
-  settings,
-}: {
-  llm: LanguageModelV1;
-  settings?: AgentSettings;
-}) => {
-  return new Agent({
-    name: "obsidian plugin API",
-    instructions: `You are an AI agent that has direct access to the Obsidian API. Your tools give you full reign over the user's Obsidian vault.`,
-    model: llm,
-    contextSchema: obsidianToolContextSchema,
-    settings,
-    tools: {
-      obsidianAPITool,
-    },
-  });
-};
-
 export const createObsidianThemesAgent = ({
   llm,
   settings,
@@ -218,6 +203,39 @@ export const createObsidianThemesAgent = ({
   });
 };
 
+export const createObsidianWorkspaceAgent = ({
+  llm,
+  settings,
+}: {
+  llm: LanguageModelV1;
+  settings?: AgentSettings;
+}) => {
+  return new Agent({
+    name: "obsidian workspace manager",
+    instructions: `
+You are an AI agent that specializes in managing the user's Obsidian workspace.
+This includes managing the user's open files, recently opened files.
+
+You do NOT do CRUD operations on the user's vault. Another agent will handle
+that. If CRUD operations are needed simply request help in working with the
+users vault.
+
+Prefer your specific tools, but when you don't have a specific tool to use, you
+can use the obsidian API directly. For example, if the user wants you to _modify_
+the tabs in their Obsidian window you should use the obsidian API directly.
+    `,
+    model: llm,
+    contextSchema: obsidianToolContextSchema,
+    settings,
+    tools: {
+      listOpenFiles: listOpenFilesTool,
+      listLastOpenFiles: listLastOpenFilesTool,
+      getCurrentFile: getCurrentFileTool,
+      [OBSIDIAN_API_TOOL_NAME]: obsidianAPITool,
+    },
+  });
+};
+
 export const createTeamManagerAgent = ({
   llm,
   settings,
@@ -229,7 +247,7 @@ export const createTeamManagerAgent = ({
   const agents = [
     createObsidianContentAgent({ llm, settings }),
     createObsidianThemesAgent({ llm, settings }),
-    // createObsidianAPIAgent({ llm }),
+    createObsidianWorkspaceAgent({ llm, settings }),
   ];
 
   const agent = new Agent({
@@ -245,6 +263,9 @@ ${agents
     return `- \`${agent.name}\`\n  This agent is instructed to: """${agent.instructions}"""`;
   })
   .join("\n")}
+  
+NOTE: The full conversation history is available to you but not your agents.
+Provide relevant information to them in your prompt.
 
 Assume that user queries are related to Obsidian. For example, phrases like 
 "my notes", "my vault", "my files", "my documents", "my writing", etc. are all
@@ -252,7 +273,7 @@ related to Obsidian.
 
 You can delegate tasks to these team members using the
 ${DELEGATE_TO_AGENT_TOOL_NAME} tool. Do not mention to the user that you're
-delegatin. The UI will display a tool call message box to the user which makes
+delegating. The UI will display a tool call message box to the user which makes
 it redundant to mention it in prose. For example, do not preface with "Now I
 will delegate...".
 
@@ -266,11 +287,10 @@ handle a user request.`,
     onSubAgentChunk: ({ toolCallId, chunk, context }) => {
       const processor = context.getProcessor(agent.name, toolCallId);
       processor.appendChunk(chunk);
-      console.log(agent.name + ":" + toolCallId, chunk, processor);
     },
     tools: {
       getCurrentDateTime,
-      obsidianAPITool,
+      [OBSIDIAN_API_TOOL_NAME]: obsidianAPITool,
     },
   });
 
