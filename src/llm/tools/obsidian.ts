@@ -495,3 +495,70 @@ export const getCurrentFileTool = tool({
     };
   },
 });
+
+export const listCssSnippetsTool = tool({
+  description:
+    "List all CSS snippets installed in the Obsidian vault, including their active status.",
+  parameters: z.object({}),
+  execute: async (_, options: ToolExecutionOptions & { context: ObsidianContext }) => {
+    const { app } = options.context;
+
+    try {
+      if (!app.customCss) {
+        throw new Error("Custom CSS module not available");
+      }
+
+      const snippetNames = app.customCss.snippets || [];
+
+      // To get active status, we need to check if each snippet is enabled
+      // Obsidian stores enabled snippets in a Set in the internal structure
+      let enabledSnippets = new Set<string>();
+
+      // Access the enabledSnippets property using the API tool approach
+      // This is a bit hacky but necessary as the public types don't expose this property
+      try {
+        const enabled = app.customCss.enabledSnippets;
+        if (enabled && (enabled instanceof Set || Array.isArray(enabled))) {
+          // Convert to Set if it's an array
+          Array.isArray(enabled)
+            ? (enabledSnippets = new Set(enabled))
+            : (enabledSnippets = enabled);
+        }
+      } catch (e) {
+        // Fallback - try to use direct property access
+        // @ts-ignore - Accessing internal property
+        const enabled = app.customCss.enabledSnippets;
+        if (enabled) {
+          enabledSnippets = new Set(Array.from(enabled));
+        }
+      }
+
+      // Build the result
+      const snippets = snippetNames.map((name) => ({
+        name,
+        isActive: enabledSnippets.has(name),
+        path: `${name}.css`, // Snippets are stored as .css files
+      }));
+
+      const snippetFolder = app.customCss.getSnippetsFolder();
+
+      return {
+        success: true,
+        snippets,
+        snippetFolder,
+        totalCount: snippets.length,
+        activeCount: snippets.filter((s) => s.isActive).length,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to list CSS snippets: ${error.message || error}`,
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        },
+      };
+    }
+  },
+});

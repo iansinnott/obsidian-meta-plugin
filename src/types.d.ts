@@ -26,10 +26,12 @@ declare module "obsidian" {
         };
       };
 
+      enabledSnippets: Set<string>;
+
       /** Get's the configured folder where all themes are stored. */
-      getThemeFolder(): Promise<string>;
+      getThemeFolder(): string;
       /** Get's the configured folder where all snippets are stored. */
-      getSnippetFolder(): Promise<string>;
+      getSnippetsFolder(): string;
 
       /** The names of css snippet files installed in the current vault. Does not include the .css extension. Does not include active status. */
       snippets: string[];

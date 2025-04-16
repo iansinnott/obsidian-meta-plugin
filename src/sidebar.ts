@@ -45,7 +45,12 @@ export class MetaSidebarView extends ItemView {
     contentEl.empty();
 
     // Add container for React
-    const reactRoot = contentEl.createDiv({ cls: "meta-sidebar-root" });
+    const reactRoot = contentEl.createDiv({
+      cls: "meta-sidebar-root",
+      attr: {
+        style: "user-select:all;",
+      },
+    });
 
     // Create React root
     this.root = createRoot(reactRoot);

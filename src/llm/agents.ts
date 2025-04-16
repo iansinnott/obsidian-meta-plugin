@@ -7,6 +7,7 @@ import {
   getCurrentFileTool,
   getCurrentThemeTool,
   listAvailableThemesTool,
+  listCssSnippetsTool,
   listFilesTool,
   listLastOpenFilesTool,
   listOpenFilesTool,
@@ -199,6 +200,7 @@ export const createObsidianThemesAgent = ({
       getCurrentTheme: getCurrentThemeTool,
       listAvailableThemes: listAvailableThemesTool,
       setTheme: setThemeTool,
+      listCssSnippets: listCssSnippetsTool,
     },
   });
 };
