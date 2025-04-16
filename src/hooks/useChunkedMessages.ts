@@ -105,7 +105,15 @@ export const useChunkedMessages = (agentId: string, threadId: string = "default"
 export const useToolResult = (agentId: string, threadId: string, toolCallId: string) => {
   const processor = getProcessor(agentId, threadId);
   const [result, setResult] = useState<ToolResultChunk | null>(null);
-  const [error, setError] = useState<ErrorChunk | null>(null);
+  const [error, setError] = useState<{
+    name: string;
+    cause: any;
+    message: string;
+    stack: string;
+    toolArgs: any;
+    toolName: string;
+    toolCallId: string;
+  } | null>(null);
 
   useEffect(() => {
     // Helper function to find result or error across all processors
@@ -140,7 +148,19 @@ export const useToolResult = (agentId: string, threadId: string, toolCallId: str
       const { data: errorData } = findAcrossProcessors(findToolError, toolCallId);
 
       setResult(resultData);
-      setError(errorData);
+      setError(
+        errorData
+          ? {
+              name: errorData.error.name,
+              message: errorData.error.message,
+              cause: errorData.error.cause,
+              toolArgs: errorData.error.toolArgs,
+              toolName: errorData.error.toolName,
+              toolCallId: errorData.error.toolCallId,
+              stack: errorData.error.stack ?? "",
+            }
+          : null
+      );
     };
 
     // Initial update
