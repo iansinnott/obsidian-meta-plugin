@@ -110,7 +110,7 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string; threadId: stri
           >
             {isSubAgentCall && subAgentData ? (
               // Render a nested AgentResponseArea for sub-agent calls
-              <div className="meta-border-t meta-border-gray-200 dark:meta-border-gray-700">
+              <div className="meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-px-2">
                 <AgentResponseArea
                   isLoading={isLoading}
                   messages={subAgentData.messages}
@@ -262,7 +262,7 @@ export const AgentResponseArea: React.FC<AgentResponseAreaProps> = ({
     <div
       data-agent-id={agentId}
       data-testid="AgentResponseArea"
-      className="meta-flex-1 meta-overflow-y-auto meta-w-full meta-h-full meta-p-2"
+      className="meta-flex-1 meta-overflow-y-auto meta-w-full meta-h-full meta-mt-2"
       ref={responseRef}
     >
       {/* NOTE: "tool" messages are not displayed. instead the tool-call is displayed and we tack the result onto the call site when complete */}

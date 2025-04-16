@@ -7,6 +7,7 @@ import type { MetaPlugin as IMetaPlugin } from "../plugin";
 import { PromptInput } from "./PromptInput";
 import { AgentResponseArea } from "./ResponseArea";
 import type { ResponseChunk } from "./types";
+import classNames from "classnames";
 
 interface MetaSidebarProps {
   plugin: IMetaPlugin;
@@ -85,9 +86,15 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
 
   return (
     <div className="meta-plugin-container meta-flex meta-flex-col meta-h-full">
-      <div className="meta-border-b meta-border-gray-200 dark:meta-border-gray-700 meta-p-2 meta-flex meta-justify-between meta-items-center">
-        <p className="meta-text-xl meta-font-semibold meta-text-gray-800 dark:meta-text-gray-200 meta-mt-0 meta-mb-0">
-          Meta Assistant
+      <header
+        className={classNames(
+          "meta-flex meta-justify-between meta-items-center meta-border-t-0",
+          "meta-border-b meta-border-solid meta-border-b-gray-200 dark:meta-border-b-gray-700",
+          "meta-pb-2 meta-px-4 meta-mx-[-20px]"
+        )}
+      >
+        <p className="meta-text-sm meta-font-mono meta-text-gray-800 dark:meta-text-gray-200 meta-mt-0 meta-mb-0">
+          Obsidian Assistant
         </p>
         <button
           onClick={reset}
@@ -95,7 +102,7 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
         >
           Clear Chat
         </button>
-      </div>
+      </header>
 
       <div className="meta-flex-1 meta-overflow-hidden meta-flex meta-flex-col">
         <AgentResponseArea

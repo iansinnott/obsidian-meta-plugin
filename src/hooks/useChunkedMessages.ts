@@ -111,16 +111,20 @@ export const useToolResult = (agentId: string, threadId: string, toolCallId: str
       findFn: (chunks: ResponseChunk[], id: string) => T | null,
       toolCallId: string
     ): { data: T | null; source?: string } => {
-      // First check in the current processor
+      // First check in the current processor. This is the only non-bug case here.
       let data = findFn(processor.getChunks(), toolCallId);
       if (data) return { data };
 
-      // If not found, search in other processors
+      // If not found, search in other processors. This is a bug case. Somewhere
+      // in the data pipeline chunks are getting stored on on a parent when a
+      // leaf agent is expected.
+      // However, I'm currently favoring more rolling this into (hypotheical)
+      // refactoring of state management down the line.
       for (const [k, v] of getProcessorsMap().entries()) {
         if (k.startsWith(agentId)) continue; // Skip if it's the same agent
         const found = findFn(v.getChunks(), toolCallId);
         if (found) {
-          console.warn("useToolResult", agentId, toolCallId, "data misplaced in", k, v);
+          console.debug("useToolResult", agentId, toolCallId, "data misplaced in", k, v);
           return { data: found, source: k };
         }
       }

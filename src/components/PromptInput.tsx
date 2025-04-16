@@ -42,7 +42,7 @@ export const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, isLoading })
   };
 
   return (
-    <div className="meta-mt-6">
+    <div className="meta-mt-2">
       <div className="meta-relative meta-flex meta-items-center">
         <textarea
           ref={textareaRef}
