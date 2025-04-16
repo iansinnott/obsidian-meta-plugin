@@ -2,6 +2,11 @@
 import "obsidian";
 
 declare module "obsidian" {
+  interface DataAdapter {
+    basePath: string;
+    getBasePath(): string;
+  }
+
   interface Vault {
     config: {
       cssTheme: string;
@@ -41,6 +46,7 @@ declare module "obsidian" {
 
     // Plugin module
     plugins?: {
+      getPluginFolder(): string;
       enabledPlugins: Set<string>;
       plugins: {
         [pluginId: string]: Plugin; // Plugin instances
