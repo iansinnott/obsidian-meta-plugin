@@ -1,3 +1,5 @@
+import { FILE_EDITOR_TOOL_NAME } from "../agents";
+
 /**
  * Transforms Anthropic API requests to replace the str_replace_editor tool
  * with a simplified version that uses the text_editor_20250124 type.
@@ -17,7 +19,7 @@ export function transformAnthropicRequest(options: RequestInit): RequestInit {
 
     // Find and replace the str_replace_editor tool
     const updatedTools = body.tools.map((tool: { name: string; [key: string]: any }) => {
-      if (tool.name === "str_replace_editor") {
+      if (tool.name === FILE_EDITOR_TOOL_NAME) {
         return {
           name: "str_replace_editor",
           type: "text_editor_20250124",

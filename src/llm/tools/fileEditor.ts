@@ -4,6 +4,9 @@ import { z } from "zod";
 import { tool } from "ai";
 
 // Schema for file editor tool commands
+// @todo - this should be a discriminated union type. note all the args are
+// valid, the current form just allows it to pass. HOWEVER, this is not ideal
+// for handing AI's other than anthropic
 export const fileEditorToolSchema = z.object({
   command: z.enum(["view", "str_replace", "create", "insert", "undo_edit"]),
   path: z.string().optional(),
