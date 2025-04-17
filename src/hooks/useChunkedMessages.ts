@@ -31,14 +31,6 @@ export const useChunkedMessages = (agentId: string, threadId: string = "default"
   const [messages, setMessages] = useState<Message[]>(processor.getMessages());
   const [chunks, setChunks] = useState<ResponseChunk[]>(processor.getChunks());
 
-  // Set up the processor on window for debugging
-  // @todo remove before distributing
-  useEffect(() => {
-    if (!(window as any).processors) {
-      (window as any).processors = getProcessorsMap();
-    }
-  }, []);
-
   // Subscribe to changes for this agent+thread
   useEffect(() => {
     const updateState = () => {

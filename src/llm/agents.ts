@@ -19,6 +19,7 @@ import {
   searchFilesByNameTool,
   searchVaultTool,
   setThemeTool,
+  toggleCssSnippetTool,
   updateFileTool,
 } from "./tools/obsidian";
 
@@ -42,12 +43,6 @@ interface AgentArgs<
     maxRetries?: number;
     maxTokens?: number;
   };
-  onSubAgentChunk?: (arg: {
-    agentId: string;
-    toolCallId: string;
-    chunk: any;
-    context: z.infer<TSchema>;
-  }) => void;
 }
 
 type GenerateTextArg = Omit<Parameters<typeof generateText>[0], "model" | "system" | "tools">;
@@ -82,7 +77,7 @@ export class Agent<
     this.instructions = args.instructions;
     this.model = args.model;
     this.contextSchema = args.contextSchema;
-    this.agents = args.agents;
+    this.agents = args.agents || [];
     this.tools = args.tools || ({} as TTools);
     this.settings = args.settings || {
       maxSteps: 20,
@@ -90,12 +85,17 @@ export class Agent<
       maxTokens: 8000,
     };
 
-    // Add the delegation tool if there are agents
-    if (this.agents) {
+    // Add the delegation tool if there are agents. This also sets up chunk
+    // processing so that we can recursively render agent calls.
+    if (this.agents.length > 0) {
       this.tools = {
         ...this.tools,
         [DELEGATE_TO_AGENT_TOOL_NAME]: createDirectReportDelegationTool<TContext>(this.agents, {
-          onChunk: args.onSubAgentChunk,
+          onChunk: ({ agentId: _, toolCallId, chunk, context }) => {
+            // @ts-expect-error - @todo We will need to fix this if we want to distribute the agent system
+            const processor = context.getProcessor(this.name, toolCallId);
+            processor.appendChunk(chunk);
+          },
         }),
       };
     }
@@ -154,7 +154,7 @@ type AgentSettings = AgentArgs<{}, any, any>["settings"];
  * @param llm - The language model to use. This is runtime-configurable so it must be taken as an arg
  * @returns An agent that can help users manage the content files in their Obsidian vault.
  */
-export const createObsidianContentAgent = ({
+const createObsidianContentAgent = ({
   llm,
   settings,
 }: {
@@ -186,7 +186,7 @@ export const createObsidianContentAgent = ({
   });
 };
 
-export const createObsidianThemesAgent = ({
+const createObsidianThemesAgent = ({
   llm,
   settings,
   obsidianPaths,
@@ -195,6 +195,18 @@ export const createObsidianThemesAgent = ({
   settings?: AgentSettings;
   obsidianPaths: ObsidianPaths;
 }) => {
+  const agents = [
+    createFileEditorAgent({
+      llm,
+      settings,
+      obsidianPaths,
+      additionalInstructions: `
+  Your expected job scope is to perform CRUD operations on the user's
+  snippets. Help the user acheive the look and feel they desire with their
+  Obsidian UI.
+      `,
+    }),
+  ];
   return new Agent({
     name: "obsidian theme manager",
     instructions: `
@@ -203,20 +215,36 @@ user's existing themes and snippets.
 
 You can help users understand their installed themes, enable/disable themes,
 and provide information about theme functionality.
+  
+If you cannot accomplish the user's request, either delegate it to your team or
+simply say so. Do not respond with instructions on how to do it manually.
+  
+In addition to your own tools, you have access to the following team members:
+
+${agents
+  .map((agent) => {
+    return `- \`${agent.name}\`\n  This agent is instructed to: """${agent.instructions}"""`;
+  })
+  .join("\n")}
+  
+Delegate to your team using the ${DELEGATE_TO_AGENT_TOOL_NAME} tool when needed.
     `,
     model: llm,
     contextSchema: obsidianToolContextSchema,
     settings,
+    // @ts-expect-error - @todo We will need to fix this if we want to distribute the agent system
+    agents,
     tools: {
       getCurrentTheme: getCurrentThemeTool,
       listAvailableThemes: listAvailableThemesTool,
       setTheme: setThemeTool,
       listCssSnippets: listCssSnippetsTool,
+      toggleCssSnippet: toggleCssSnippetTool,
     },
   });
 };
 
-export const createObsidianWorkspaceAgent = ({
+const createObsidianWorkspaceAgent = ({
   llm,
   settings,
 }: {
@@ -257,8 +285,8 @@ export interface ObsidianPaths {
   pluginsPath?: string;
 }
 
-// @todo
-export const createObsidianPluginsAgent = ({
+// @todo - Implement this
+const createObsidianPluginsAgent = ({
   llm,
   settings,
   obsidianPaths,
@@ -288,7 +316,7 @@ and provide information about plugin functionality.
  * @param param0 Configuration options
  * @returns A file editor agent
  */
-export const createFileEditorAgent = ({
+const createFileEditorAgent = ({
   llm,
   settings,
   obsidianPaths,
@@ -358,20 +386,9 @@ export const createTeamManagerAgent = ({
   settings?: AgentSettings;
   obsidianPaths: ObsidianPaths;
 }) => {
-  // prettier-ignore
   const agents = [
-    createFileEditorAgent({
-      llm,
-      settings,
-      obsidianPaths,
-      additionalInstructions: `
-  Your expected job scope is to perform CRUD operations on the user's
-  snippets. Help the user acheive the look and feel they desire with their
-  Obsidian UI.
-      `,
-    }),
-    // createObsidianContentAgent({ llm, settings }),
-    // createObsidianThemesAgent({ llm, settings, obsidianPaths }),
+    createObsidianContentAgent({ llm, settings }),
+    createObsidianThemesAgent({ llm, settings, obsidianPaths }),
     createObsidianWorkspaceAgent({ llm, settings }),
   ];
 
@@ -407,12 +424,8 @@ discouraged. Please only use this functionality when you're team is unable to
 handle a user request.`,
     model: llm,
     contextSchema: obsidianToolContextSchema,
-    // @ts-ignore for now - something about the streams
+    // @ts-expect-error @todo We will need to fix this if we want to distribute the agent system - something about the streams
     agents,
-    onSubAgentChunk: ({ toolCallId, chunk, context }) => {
-      const processor = context.getProcessor(agent.name, toolCallId);
-      processor.appendChunk(chunk);
-    },
     tools: {
       getCurrentDateTime,
       [OBSIDIAN_API_TOOL_NAME]: obsidianAPITool,

@@ -84,7 +84,6 @@ export const getProcessor = (agentId: string, threadId: string): ChunkProcessor 
       return result;
     };
 
-    console.log("setting processor", key, processor, processorsMap);
     processorsMap.set(key, processor);
   }
 

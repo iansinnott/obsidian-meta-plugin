@@ -58,7 +58,7 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string; threadId: stri
       <div
         onClick={() => setIsOpen(!isOpen)}
         className={classNames(
-          "meta-p-2 meta-cursor-pointer hover:meta-bg-gray-100 dark:hover:meta-bg-gray-800 meta-font-medium meta-flex meta-items-center meta-gap-2 meta-border-b meta-border-b-solid meta-border-gray-200 dark:meta-border-gray-700",
+          "meta-p-2 meta-cursor-pointer meta-rounded-t-lg hover:meta-bg-gray-100/25 dark:hover:meta-bg-gray-800/25 meta-font-medium meta-flex meta-items-center meta-gap-2 meta-border-b meta-border-b-solid meta-border-gray-200 dark:meta-border-gray-700",
           {
             "meta-border-b-0": !isOpen,
             "meta-border-b-1 meta-border-b-solid": isOpen,
