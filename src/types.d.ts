@@ -31,6 +31,12 @@ declare module "obsidian" {
         };
       };
 
+      /**
+       * @param snippetName - The name of the CSS snippet to enable/disable.
+       * @param enabled - Whether to enable (true) or disable (false) the snippet.
+       */
+      setCssEnabledStatus: (snippetName: string, enabled: boolean) => void;
+
       enabledSnippets: Set<string>;
 
       /** Get's the configured folder where all themes are stored. */

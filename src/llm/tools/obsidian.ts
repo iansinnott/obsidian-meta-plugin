@@ -562,3 +562,53 @@ export const listCssSnippetsTool = tool({
     }
   },
 });
+
+export const toggleCssSnippetTool = tool({
+  description:
+    "Enable or disable a CSS snippet in the Obsidian vault by name. Generally you will get the snippet name by first listing the user's CSS snippets.",
+  parameters: z.object({
+    snippetName: z.string().describe("Name of the CSS snippet to toggle (without .css extension)"),
+    enabled: z.boolean().describe("Whether to enable (true) or disable (false) the snippet"),
+  }),
+  execute: async (
+    { snippetName, enabled },
+    options: ToolExecutionOptions & { context: ObsidianContext }
+  ) => {
+    const { app } = options.context;
+
+    try {
+      if (!app.customCss) {
+        throw new Error("Custom CSS module not available");
+      }
+
+      // Check if the snippet exists
+      const snippets = app.customCss.snippets || [];
+      if (!snippets.includes(snippetName)) {
+        return {
+          success: false,
+          message: `CSS snippet '${snippetName}' not found. Use listCssSnippetsTool to see available snippets.`,
+        };
+      }
+
+      // Toggle the snippet
+      app.customCss.setCssEnabledStatus(snippetName, enabled);
+
+      return {
+        success: true,
+        message: `CSS snippet '${snippetName}' ${enabled ? "enabled" : "disabled"} successfully.`,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to ${enabled ? "enable" : "disable"} CSS snippet: ${
+          error.message || error
+        }`,
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        },
+      };
+    }
+  },
+});
