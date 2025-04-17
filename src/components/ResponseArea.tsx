@@ -3,10 +3,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useChunkedMessages, useToolResult } from "../hooks/useChunkedMessages";
-import { DELEGATE_TO_AGENT_TOOL_NAME, OBSIDIAN_API_TOOL_NAME } from "../llm/agents";
+import { DELEGATE_TO_AGENT_TOOL_NAME } from "../llm/agents";
 import { type Message } from "../llm/chunk-processor";
 import type { ToolCall } from "./MetaSidebar";
 import { ShimmerText } from "./ShimmerText";
+import { getToolCallHeading, ToolCallLeaf } from "./ToolCallLeafView";
 
 const capitalizeWords = (str: string) => {
   return str
@@ -23,7 +24,9 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string; threadId: stri
   args,
 }) => {
   const isSubAgentCall = toolName === DELEGATE_TO_AGENT_TOOL_NAME;
-  const displayName = isSubAgentCall ? capitalizeWords(args.agentId) : toolName;
+  const displayName = isSubAgentCall
+    ? capitalizeWords(args.agentId)
+    : getToolCallHeading(toolName, args).title;
   const { result, error, isLoading } = useToolResult(callingAgentId, threadId, toolCallId);
 
   // For sub-agent calls, get the sub-agent's messages and chunks
@@ -120,42 +123,13 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string; threadId: stri
                 />
               </div>
             ) : (
-              // Render the regular tool call view for normal tool calls
-              <>
-                <div className="tool-call-args">
-                  {(() => {
-                    if (toolName === OBSIDIAN_API_TOOL_NAME) {
-                      return (
-                        <pre className="meta-bg-gray-50 dark:meta-bg-gray-900 meta-p-2 meta-rounded meta-overflow-x-auto meta-text-xs meta-my-2">
-                          {args.functionBody}
-                        </pre>
-                      );
-                    }
-
-                    const argsStr = JSON.stringify(args, null, 2);
-                    const truncated = argsStr.length > 1000;
-                    return (
-                      <code className="meta-bg-gray-50 dark:meta-bg-gray-900 meta-block meta-rounded-b-md meta-overflow-x-auto meta-text-xs meta-whitespace-pre meta-text-gray-800 dark:meta-text-gray-200">
-                        {"→ " + (truncated ? `${argsStr.slice(0, 1000)}... (truncated)` : argsStr)}
-                      </code>
-                    );
-                  })()}
-                </div>
-                {result && (
-                  <div className="tool-call-result">
-                    {(() => {
-                      const resultStr = JSON.stringify(result.result, null, 2);
-                      const truncated = resultStr.length > 1000;
-                      return (
-                        <pre>
-                          {"← " +
-                            (truncated ? `${resultStr.slice(0, 1000)}... (truncated)` : resultStr)}
-                        </pre>
-                      );
-                    })()}
-                  </div>
-                )}
-              </>
+              <ToolCallLeaf
+                callingAgentId={callingAgentId}
+                threadId={threadId}
+                toolCallId={toolCallId}
+                toolName={toolName}
+                args={args}
+              />
             )}
 
             {error && (
@@ -182,24 +156,22 @@ const MessageBubble: React.FC<{
   return (
     <div className={`meta-mb-2 meta-w-full`}>
       <div
-        className={classNames(
-          "meta-rounded-lg",
-          isUser
-            ? "meta-bg-blue-500 meta-text-white meta-p-2"
-            : "meta-text-gray-900 dark:meta-text-gray-100"
-        )}
+        className={classNames("meta-rounded-lg", {
+          "meta-bg-blue-500 meta-text-white meta-p-2": isUser,
+          "meta-text-gray-900 dark:meta-text-gray-100": !isUser,
+        })}
       >
         {isUser ? (
           <>
-            <div className="meta-flex meta-items-center">
+            <div className="meta-flex meta-items-start">
               <svg
-                className="meta-w-4 meta-h-4 meta-mr-2 meta-text-white meta-fill-current"
+                className="meta-w-4 meta-h-4 meta-mr-2 meta-text-white meta-fill-current meta-shrink-0 meta-mt-0.5"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
               >
                 <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
               </svg>
-              <p className="meta-m-0">
+              <p className="meta-m-0 meta-whitespace-pre-wrap">
                 {message.content
                   ?.filter((c) => c.type === "text")
                   .map((c) => c.text)
