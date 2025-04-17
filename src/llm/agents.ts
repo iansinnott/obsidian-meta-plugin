@@ -285,7 +285,6 @@ export interface ObsidianPaths {
   pluginsPath?: string;
 }
 
-// @todo - Implement this
 const createObsidianPluginsAgent = ({
   llm,
   settings,
@@ -295,16 +294,87 @@ const createObsidianPluginsAgent = ({
   settings?: AgentSettings;
   obsidianPaths: ObsidianPaths;
 }) => {
+  const agents = [
+    createFileEditorAgent({
+      llm,
+      settings,
+      obsidianPaths,
+      additionalInstructions: `
+        Your primary job scope is to do CRUD operations on the user's Obsidian
+        plugins.
+          
+        NOTE: When listing plugins, assume that any plugin's who's ID starts
+        with 'omp-' were authored by the 'Obsidian Meta Plugin' agent, i.e. the
+        controller of the system which you are a part of.
+
+        NOTE: When creating a plugin the manifest.json file should include
+        "Obsidian Meta Plugin" as the author. The ID should _start with_ 'omp-',
+        representing 'Obsidian Meta Plugin'. This will make it easier to
+        identify your plugins after the fact. The author URL should always be
+        'https://github.com/iansinnott/obsidian-meta-plugin'.
+        `,
+    }),
+  ];
+
   return new Agent({
     name: "obsidian plugin manager",
     instructions: `
 You are an AI agent that specializes in managing Obsidian plugins.
 You can help users understand their installed plugins, enable/disable plugins,
 and provide information about plugin functionality.
+  
+You can also create new plugins to add functionality to Obsidian. Whatever the
+user desires.
+  
+==== Obsidian Plugin Basic Structure ====
+
+Obsidian plugins requre (at least) the following files:
+
+- manifest.json
+- main.js
+- styles.css
+
+==== Obsidian Plugin Manifest File ====
+
+The manifest.json file is a JSON file that describes the plugin. It is used to
+configure the plugin and provide information about it.
+
+Example:
+
+\`\`\`json
+{
+	"id": "omp-my-cool-plugin",
+	"name": "My Cool Plugin",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "A very cool plugin that does something very cool.",
+	"author": "Obsidian Meta Plugin",
+	"authorUrl": "https://github.com/iansinnott/obsidian-meta-plugin",
+	"fundingUrl": "https://github.com/sponsors/iansinnott",
+	"isDesktopOnly": true
+}
+\`\`\`
+
+==== Additional Considerations ====
+  
+Avoid requiring a build step. In other words, DO NOT use TypeScript to write the
+plugin, use JavaScript. Use \`require\` to import modules. 
+  
+In addition to your own tools, you have access to the following team members:
+
+${agents
+  .map((agent) => {
+    return `- \`${agent.name}\`\n  This agent is instructed to: """${agent.instructions}"""`;
+  })
+  .join("\n")}
+  
+Delegate to your team using the ${DELEGATE_TO_AGENT_TOOL_NAME} tool when needed.
     `,
     model: llm,
     contextSchema: obsidianToolContextSchema,
     settings,
+    // @ts-expect-error - @todo We will need to fix this if we want to distribute the agent system
+    agents,
     tools: {
       [OBSIDIAN_API_TOOL_NAME]: obsidianAPITool,
     },
@@ -390,6 +460,7 @@ export const createTeamManagerAgent = ({
     createObsidianContentAgent({ llm, settings }),
     createObsidianThemesAgent({ llm, settings, obsidianPaths }),
     createObsidianWorkspaceAgent({ llm, settings }),
+    createObsidianPluginsAgent({ llm, settings, obsidianPaths }),
   ];
 
   const agent = new Agent({
@@ -402,9 +473,9 @@ Your team includes:
 
 ${agents
   .map((agent) => {
-    return `- \`${agent.name}\`\n  This agent is instructed to: """${agent.instructions}"""`;
+    return `<agent_instructions agent_name="${agent.name}">\n${agent.instructions}\n</agent_instructions>`;
   })
-  .join("\n")}
+  .join("\n\n")}
   
 NOTE: The full conversation history is available to you but not your agents.
 Provide relevant information to them in your prompt.
