@@ -1,44 +1,83 @@
 # Obsidian Meta Plugin
 
-This is a plugin for Obsidian (https://obsidian.md).
+A plugin for [Obsidian](https://obsidian.md) that can modify Obsidian itself. It can create or modify plugins, themes, and settings, acting as your personal Obsidian developer.
 
-## Releasing new releases
+## Features
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+- **LLM-Powered Assistance**: Integrates with various language models (Claude, GPT, Llama) to help you customize Obsidian
+- **Plugin Development**: Create and modify plugins directly within Obsidian
+- **CSS Customization**: Edit themes and CSS snippets with AI assistance
+- **Settings Management**: Modify Obsidian settings through natural language requests
+- **Interactive UI**: Clean React-based sidebar interface with real-time streaming responses
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+## Installation
 
-## Adding your plugin to the community plugin list
+### From Obsidian Community Plugins
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+1. Open Obsidian Settings > Community Plugins
+2. Disable Safe Mode
+3. Search for "Meta Plugin"
+4. Install and enable the plugin
 
-## Development & Contributing
+### Manual Installation
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- Make sure you have [Bun](https://bun.sh) installed at least v1 (`bun --version`)
-- `bun install` to install dependencies.
-- `bun run dev` to start compilation in watch mode.
+1. Download the latest release from the [Releases page](https://github.com/your-username/obsidian-meta-plugin/releases)
+2. Extract the zip archive into your vault's plugins folder: `<vault>/.obsidian/plugins/`
+3. Enable the plugin in Obsidian's Community Plugins settings
 
-## Manually installing the plugin
+## Usage
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/obsidian-meta-plugin/`.
+1. Click the Meta Plugin icon in the ribbon to open the sidebar
+2. Enter your request (e.g., "Create a plugin that adds a word count to the status bar")
+3. Choose your preferred language model
+4. The plugin will process your request and provide interactive results
 
-## Improve code quality with eslint (optional)
+## Development
 
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code.
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v16 or higher)
+- [Bun](https://bun.sh) (v1 or higher)
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/obsidian-meta-plugin.git
+
+# Navigate to the plugin directory
+cd obsidian-meta-plugin
+
+# Install dependencies
+bun install
+
+# Start development server with hot reload
+bun run dev
+```
+
+### Testing
+
+```bash
+# Run all tests
+bun test
+
+# Run a specific test file
+bun test src/llm/agent.test.ts
+
+# Run tests in watch mode
+bun test --watch
+```
+
+### Building
+
+```bash
+# Build the production version
+bun run build
+
+# Bump version
+bun run version
+```
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
