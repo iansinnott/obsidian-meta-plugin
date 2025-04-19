@@ -7,6 +7,8 @@ import { SampleModal } from "./modal";
 import { DEFAULT_SETTINGS, MetaSettingTab } from "./settings";
 import { META_SIDEBAR_VIEW_TYPE, MetaSidebarView, activateSidebarView } from "./sidebar";
 import { transformAnthropicRequest } from "./llm/utils/transformAnthropicRequest";
+import { ChunkProcessor } from "./llm/chunk-processor";
+import { registerPluginInstance } from "./hooks/state";
 
 export class MetaPlugin extends Plugin {
   settings: typeof DEFAULT_SETTINGS;
@@ -18,6 +20,9 @@ export class MetaPlugin extends Plugin {
   provider: OpenAIProvider | AnthropicProvider;
   llm: LanguageModelV1;
   agent: ReturnType<typeof createTeamManagerAgent>;
+  // State management for processors and subscribers
+  private processorsMap: Map<string, ChunkProcessor> = new Map();
+  private subscribersMap: Map<string, Set<() => void>> = new Map();
 
   /**
    * Handle changes to the LLM configuration. Whenever the LLM settings change
@@ -102,6 +107,8 @@ export class MetaPlugin extends Plugin {
   }
 
   async onload() {
+    // Register the plugin instance for state delegation
+    registerPluginInstance(this);
     await this.loadSettings();
 
     this.handleApiSettingsUpdate();
@@ -168,5 +175,58 @@ export class MetaPlugin extends Plugin {
     }
     await this.saveSettings();
     return models;
+  }
+
+  private createKey(agentId: string, threadId: string): string {
+    return `${agentId}:${threadId}`;
+  }
+
+  public getProcessorsMap(): Map<string, ChunkProcessor> {
+    return this.processorsMap;
+  }
+
+  public getSubscribers(agentId: string, threadId: string = "default"): Set<() => void> {
+    const key = this.createKey(agentId, threadId);
+    if (!this.subscribersMap.has(key)) {
+      this.subscribersMap.set(key, new Set());
+    }
+    return this.subscribersMap.get(key)!;
+  }
+
+  public notifySubscribers(agentId: string, threadId: string = "default"): void {
+    this.getSubscribers(agentId, threadId).forEach((sub) => sub());
+  }
+
+  public getProcessor(agentId: string, threadId: string = "default"): ChunkProcessor {
+    if (!agentId || !threadId) {
+      throw new Error("Agent ID and thread ID are required");
+    }
+
+    const key = this.createKey(agentId, threadId);
+    if (!this.processorsMap.has(key)) {
+      const processor = new ChunkProcessor();
+      const origAppendChunk = processor.appendChunk.bind(processor);
+      const origAppendMessage = processor.appendMessage.bind(processor);
+      const origReset = processor.reset.bind(processor);
+
+      processor.appendChunk = (chunk) => {
+        const res = origAppendChunk(chunk);
+        this.notifySubscribers(agentId, threadId);
+        return res;
+      };
+      processor.appendMessage = (msg) => {
+        const res = origAppendMessage(msg);
+        this.notifySubscribers(agentId, threadId);
+        return res;
+      };
+      processor.reset = () => {
+        const res = origReset();
+        this.notifySubscribers(agentId, threadId);
+        return res;
+      };
+
+      this.processorsMap.set(key, processor);
+    }
+    return this.processorsMap.get(key)!;
   }
 }

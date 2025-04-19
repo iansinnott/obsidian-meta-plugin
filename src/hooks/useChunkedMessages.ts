@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { ErrorChunk, ResponseChunk, ToolResultChunk } from "../components/types";
 import { type Message } from "../llm/chunk-processor";
-import { getProcessor, getProcessorsMap, getSubscribers } from "./state";
+import { useApp } from "./useApp";
 
 // Plain utility function to find a tool result
 export const findToolResult = (
@@ -27,7 +27,8 @@ export const findToolError = (chunks: ResponseChunk[], toolCallId: string): Erro
 
 // Hook to use the chunked messages for a specific agent and thread
 export const useChunkedMessages = (agentId: string, threadId: string = "default") => {
-  const processor = getProcessor(agentId, threadId);
+  const { plugin } = useApp();
+  const processor = plugin.getProcessor(agentId, threadId);
   const [messages, setMessages] = useState<Message[]>(processor.getMessages());
   const [chunks, setChunks] = useState<ResponseChunk[]>(processor.getChunks());
 
@@ -38,23 +39,23 @@ export const useChunkedMessages = (agentId: string, threadId: string = "default"
       setChunks(JSON.parse(JSON.stringify(processor.getChunks())));
     };
 
-    const subscribers = getSubscribers(agentId, threadId);
+    const subscribers = plugin.getSubscribers(agentId, threadId);
     subscribers.add(updateState);
     updateState();
 
     return () => {
       subscribers.delete(updateState);
     };
-  }, [agentId, threadId, processor]);
+  }, [agentId, threadId, processor, plugin]);
 
   const reset = useCallback(() => {
-    const map = getProcessorsMap();
+    const map = plugin.getProcessorsMap();
     for (const [key, processor] of map.entries()) {
       if (key.startsWith(agentId)) {
         processor.reset();
       }
     }
-  }, []);
+  }, [agentId, plugin]);
 
   const getToolResult = useCallback(
     (toolCallId: string) => findToolResult(chunks, toolCallId),
@@ -95,7 +96,8 @@ export const useChunkedMessages = (agentId: string, threadId: string = "default"
  *   - agentId: The ID of the agent that initiated the tool call (passed through)
  */
 export const useToolResult = (agentId: string, threadId: string, toolCallId: string) => {
-  const processor = getProcessor(agentId, threadId);
+  const { plugin } = useApp();
+  const processor = plugin.getProcessor(agentId, threadId);
   const [result, setResult] = useState<ToolResultChunk | null>(null);
   const [error, setError] = useState<{
     name: string;
@@ -122,7 +124,7 @@ export const useToolResult = (agentId: string, threadId: string, toolCallId: str
       // leaf agent is expected.
       // However, I'm currently favoring more rolling this into (hypotheical)
       // refactoring of state management down the line.
-      for (const [k, v] of getProcessorsMap().entries()) {
+      for (const [k, v] of plugin.getProcessorsMap().entries()) {
         if (k.startsWith(agentId)) continue; // Skip if it's the same agent
         const found = findFn(v.getChunks(), toolCallId);
         if (found) {
@@ -159,14 +161,14 @@ export const useToolResult = (agentId: string, threadId: string, toolCallId: str
     updateState();
 
     // Add subscriber
-    const subscribers = getSubscribers(agentId, threadId);
+    const subscribers = plugin.getSubscribers(agentId, threadId);
     subscribers.add(updateState);
 
     // Clean up
     return () => {
       subscribers.delete(updateState);
     };
-  }, [toolCallId, agentId, threadId, processor]);
+  }, [toolCallId, agentId, threadId, processor, plugin]);
 
   return { result, error, isLoading: !result && !error, agentId };
 };
