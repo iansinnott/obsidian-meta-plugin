@@ -85,10 +85,11 @@ export class MetaPlugin extends Plugin {
 
     this.agent = createTeamManagerAgent({
       llm: this.llm,
+      // @todo Should prob make this configurable from the settings tab.
       settings: {
-        maxSteps: 20,
+        maxSteps: 35,
         maxRetries: 2,
-        maxTokens: 8000,
+        maxTokens: 14_000,
       },
       obsidianPaths: {
         vaultPath: this.app.vault.adapter.getBasePath(),
