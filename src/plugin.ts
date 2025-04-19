@@ -1,4 +1,4 @@
-import { Plugin } from "obsidian";
+import { Plugin, normalizePath } from "obsidian";
 import { createAnthropic, type AnthropicProvider } from "@ai-sdk/anthropic";
 import type { LanguageModelV1 } from "ai";
 import { createOpenAI, type OpenAIProvider } from "@ai-sdk/openai";
@@ -23,6 +23,42 @@ export class MetaPlugin extends Plugin {
   // State management for processors and subscribers
   private processorsMap: Map<string, ChunkProcessor> = new Map();
   private subscribersMap: Map<string, Set<() => void>> = new Map();
+
+  async ensureDataDir(subDir = "") {
+    const path = require("path");
+    const adapter = this.app.vault.adapter;
+    const dataDir = normalizePath(
+      path.join(this.app.plugins?.getPluginFolder(), this.manifest.id, "d")
+    );
+
+    if (!(await adapter.exists(dataDir))) {
+      await adapter.mkdir(dataDir);
+    }
+
+    if (subDir) {
+      const subDirPath = normalizePath(path.join(dataDir, subDir));
+      if (!(await adapter.exists(subDirPath))) {
+        await adapter.mkdir(subDirPath);
+      }
+      return subDirPath;
+    }
+
+    return dataDir;
+  }
+
+  /**
+   * Save arbitrary data to the plugin's data directory.
+   */
+  async savePluginData(fileName: string, data: any) {
+    const adapter = this.app.vault.adapter;
+    const path = require("path");
+    const dataDir = await this.ensureDataDir();
+    const filePath = path.join(dataDir, fileName);
+    await adapter.write(filePath, JSON.stringify(data));
+    return {
+      path: filePath,
+    };
+  }
 
   /**
    * Handle changes to the LLM configuration. Whenever the LLM settings change
