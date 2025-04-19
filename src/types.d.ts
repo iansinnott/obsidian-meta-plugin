@@ -67,6 +67,12 @@ declare module "obsidian" {
           description?: string;
         };
       };
+      /** Get a plugin instance by its ID */
+      getPlugin(id: string): Plugin | null;
+      /** Enable a plugin and save the change to disk */
+      enablePluginAndSave(id: string): Promise<void>;
+      /** Disable a plugin and save the change to disk */
+      disablePluginAndSave(id: string): Promise<void>;
     };
 
     internalPlugins: {
