@@ -612,3 +612,102 @@ export const toggleCssSnippetTool = tool({
     }
   },
 });
+
+export const togglePluginTool = tool({
+  description:
+    "Enable or disable an Obsidian plugin by ID. Use this to toggle plugins on or off programmatically.",
+  parameters: z.object({
+    pluginId: z.string().describe("ID of the Obsidian plugin to toggle"),
+    enabled: z.boolean().describe("Whether to enable (true) or disable (false) the plugin"),
+  }),
+  execute: async (
+    { pluginId, enabled },
+    options: ToolExecutionOptions & { context: ObsidianContext }
+  ) => {
+    const { app } = options.context;
+
+    try {
+      if (!app.plugins) {
+        throw new Error("Plugin API not available");
+      }
+
+      // Check if the plugin exists
+      const plugin = app.plugins.getPlugin(pluginId);
+
+      if (!plugin) {
+        return {
+          success: false,
+          message: `Plugin '${pluginId}' not found. Please check the plugin ID.`,
+        };
+      }
+
+      // Toggle the plugin
+      if (enabled) {
+        await app.plugins.enablePluginAndSave(pluginId);
+      } else {
+        await app.plugins.disablePluginAndSave(pluginId);
+      }
+
+      return {
+        success: true,
+        message: `Plugin '${pluginId}' ${enabled ? "enabled" : "disabled"} successfully.`,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to ${enabled ? "enable" : "disable"} plugin: ${error.message || error}`,
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        },
+      };
+    }
+  },
+});
+
+export const listPluginsTool = tool({
+  description:
+    "List all installed plugins in the Obsidian vault, showing their ID, name, version, and enabled status.",
+  parameters: z.object({}),
+  execute: async (_, options: ToolExecutionOptions & { context: ObsidianContext }) => {
+    const { app } = options.context;
+
+    try {
+      if (!app.plugins) {
+        throw new Error("Plugin API not available");
+      }
+
+      // Get all plugin manifests and active status
+      const manifests = app.plugins.manifests || {};
+      const enabledPlugins = app.plugins.enabledPlugins || new Set();
+
+      // Build the result list
+      const plugins = Object.entries(manifests).map(([id, manifest]) => ({
+        id,
+        name: manifest.name,
+        version: manifest.version,
+        author: manifest.author,
+        description: manifest.description || "",
+        enabled: enabledPlugins.has(id),
+      }));
+
+      return {
+        success: true,
+        plugins,
+        totalCount: plugins.length,
+        enabledCount: plugins.filter((p) => p.enabled).length,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to list plugins: ${error.message || error}`,
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        },
+      };
+    }
+  },
+});

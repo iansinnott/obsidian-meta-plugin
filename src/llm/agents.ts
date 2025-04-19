@@ -13,6 +13,7 @@ import {
   listFilesTool,
   listLastOpenFilesTool,
   listOpenFilesTool,
+  listPluginsTool,
   obsidianAPITool,
   obsidianToolContextSchema,
   readFilesTool,
@@ -20,6 +21,7 @@ import {
   searchVaultTool,
   setThemeTool,
   toggleCssSnippetTool,
+  togglePluginTool,
   updateFileTool,
 } from "./tools/obsidian";
 
@@ -376,6 +378,8 @@ Delegate to your team using the ${DELEGATE_TO_AGENT_TOOL_NAME} tool when needed.
     // @ts-expect-error - @todo We will need to fix this if we want to distribute the agent system
     agents,
     tools: {
+      listPlugins: listPluginsTool,
+      togglePlugin: togglePluginTool,
       [OBSIDIAN_API_TOOL_NAME]: obsidianAPITool,
     },
   });
