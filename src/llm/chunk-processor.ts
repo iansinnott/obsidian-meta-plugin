@@ -185,4 +185,14 @@ export class ChunkProcessor {
   appendMessage(message: Message) {
     this.messages.push(message);
   }
+
+  /**
+   * Restore processor state from persisted data
+   */
+  public loadState(state: { messages: Message[]; chunks: any[] }) {
+    this.reset();
+    // Directly set internal arrays to persisted values
+    this.messages = state.messages;
+    this.chunks = state.chunks;
+  }
 }

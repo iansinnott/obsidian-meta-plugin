@@ -60,6 +60,42 @@ export class MetaPlugin extends Plugin {
     };
   }
 
+  /** Build a sanitized filename for conversation persistence */
+  private getConversationFileName(agentId: string, threadId: string): string {
+    const safeAgent = agentId.replace(/[^a-zA-Z0-9]/g, "_");
+    const safeThread = threadId.replace(/[^a-zA-Z0-9]/g, "_");
+    return `${safeAgent}__${safeThread}.json`;
+  }
+
+  /** Persist the current conversation for an agent/thread */
+  public async saveConversation(agentId: string, threadId: string) {
+    const adapter = this.app.vault.adapter;
+    const path = require("path");
+    const subDir = await this.ensureDataDir("conversations");
+    const fileName = this.getConversationFileName(agentId, threadId);
+    const filePath = path.join(subDir, fileName);
+    const proc = this.getProcessor(agentId, threadId);
+    const data = { messages: proc.getMessages(), chunks: proc.getChunks() };
+    await adapter.write(filePath, JSON.stringify(data));
+  }
+
+  /** Load a persisted conversation for an agent/thread */
+  public async loadConversation(agentId: string, threadId: string) {
+    const adapter = this.app.vault.adapter;
+    const path = require("path");
+    const subDir = await this.ensureDataDir("conversations");
+    const fileName = this.getConversationFileName(agentId, threadId);
+    const filePath = path.join(subDir, fileName);
+    if (!(await adapter.exists(filePath))) {
+      return;
+    }
+    const raw = await adapter.read(filePath);
+    const state = JSON.parse(raw);
+    const proc = this.getProcessor(agentId, threadId);
+    proc.loadState(state);
+    this.notifySubscribers(agentId, threadId);
+  }
+
   /**
    * Handle changes to the LLM configuration. Whenever the LLM settings change
    * we need to re-instantiate a few things with the updated information.
@@ -248,16 +284,19 @@ export class MetaPlugin extends Plugin {
       processor.appendChunk = (chunk) => {
         const res = origAppendChunk(chunk);
         this.notifySubscribers(agentId, threadId);
+        this.saveConversation(agentId, threadId).catch(console.error);
         return res;
       };
       processor.appendMessage = (msg) => {
         const res = origAppendMessage(msg);
         this.notifySubscribers(agentId, threadId);
+        this.saveConversation(agentId, threadId).catch(console.error);
         return res;
       };
       processor.reset = () => {
         const res = origReset();
         this.notifySubscribers(agentId, threadId);
+        this.saveConversation(agentId, threadId).catch(console.error);
         return res;
       };
 

@@ -39,6 +39,9 @@ export const useChunkedMessages = (agentId: string, threadId: string = "default"
       setChunks(JSON.parse(JSON.stringify(processor.getChunks())));
     };
 
+    // Load any saved conversation from disk, then update state
+    plugin.loadConversation(agentId, threadId).then(updateState).catch(console.error);
+
     const subscribers = plugin.getSubscribers(agentId, threadId);
     subscribers.add(updateState);
     updateState();
