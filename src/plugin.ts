@@ -23,6 +23,8 @@ export class MetaPlugin extends Plugin {
   // State management for processors and subscribers
   private processorsMap: Map<string, ChunkProcessor> = new Map();
   private subscribersMap: Map<string, Set<() => void>> = new Map();
+  // Current conversation identifier
+  private currentConversationId: string = "";
 
   async ensureDataDir(subDir = "") {
     const path = require("path");
@@ -44,6 +46,32 @@ export class MetaPlugin extends Plugin {
     }
 
     return dataDir;
+  }
+
+  /** Generate a new conversation ID based on timestamp */
+  private generateConversationId(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, "0");
+    const day = now.getDate().toString().padStart(2, "0");
+    const hours = now.getHours().toString().padStart(2, "0");
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    const seconds = now.getSeconds().toString().padStart(2, "0");
+    return `${year}${month}${day}-${hours}${minutes}${seconds}`;
+  }
+
+  /** Begin a new conversation and ensure its directory exists */
+  public async startNewConversation() {
+    this.currentConversationId = this.generateConversationId();
+    const adapter = this.app.vault.adapter;
+    const path = require("path");
+    // Ensure root conversations folder
+    const conversationRoot = await this.ensureDataDir("conversations");
+    // Ensure this conversation's subfolder
+    const convDir = normalizePath(path.join(conversationRoot, this.currentConversationId));
+    if (!(await adapter.exists(convDir))) {
+      await adapter.mkdir(convDir);
+    }
   }
 
   /**
@@ -71,9 +99,14 @@ export class MetaPlugin extends Plugin {
   public async saveConversation(agentId: string, threadId: string) {
     const adapter = this.app.vault.adapter;
     const path = require("path");
-    const subDir = await this.ensureDataDir("conversations");
+    // Ensure conversations root and this conversation's folder exist
+    const conversationRoot = await this.ensureDataDir("conversations");
+    const convDir = normalizePath(path.join(conversationRoot, this.currentConversationId));
+    if (!(await adapter.exists(convDir))) {
+      await adapter.mkdir(convDir);
+    }
     const fileName = this.getConversationFileName(agentId, threadId);
-    const filePath = path.join(subDir, fileName);
+    const filePath = path.join(convDir, fileName);
     const proc = this.getProcessor(agentId, threadId);
     const data = { messages: proc.getMessages(), chunks: proc.getChunks() };
     await adapter.write(filePath, JSON.stringify(data));
@@ -83,9 +116,14 @@ export class MetaPlugin extends Plugin {
   public async loadConversation(agentId: string, threadId: string) {
     const adapter = this.app.vault.adapter;
     const path = require("path");
-    const subDir = await this.ensureDataDir("conversations");
+    // Look under the current conversation's folder
+    const conversationRoot = await this.ensureDataDir("conversations");
+    const convDir = normalizePath(path.join(conversationRoot, this.currentConversationId));
+    if (!(await adapter.exists(convDir))) {
+      return;
+    }
     const fileName = this.getConversationFileName(agentId, threadId);
-    const filePath = path.join(subDir, fileName);
+    const filePath = path.join(convDir, fileName);
     if (!(await adapter.exists(filePath))) {
       return;
     }
@@ -184,6 +222,8 @@ export class MetaPlugin extends Plugin {
     await this.loadSettings();
 
     this.handleApiSettingsUpdate();
+    // Start a fresh conversation on load
+    await this.startNewConversation();
 
     // Register the sidebar view
     this.registerView(META_SIDEBAR_VIEW_TYPE, (leaf) => new MetaSidebarView(leaf, this));

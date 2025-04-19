@@ -51,7 +51,10 @@ export const useChunkedMessages = (agentId: string, threadId: string = "default"
     };
   }, [agentId, threadId, processor, plugin]);
 
-  const reset = useCallback(() => {
+  const reset = useCallback(async () => {
+    // Start a new conversation so previous history is preserved on disk
+    await plugin.startNewConversation();
+    // Reset all processors for this agent (will save to new conversation)
     const map = plugin.getProcessorsMap();
     for (const [key, processor] of map.entries()) {
       if (key.startsWith(agentId)) {
