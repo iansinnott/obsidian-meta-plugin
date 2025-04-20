@@ -2,7 +2,6 @@ import { Component, ItemView, WorkspaceLeaf, type App } from "obsidian";
 import * as React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MetaSidebar } from "./components/MetaSidebar";
-import "./components/metaSidebar.css";
 import { getProcessor } from "./hooks/state";
 import { AppProvider } from "./hooks/useApp";
 import type { MetaPlugin as IMetaPlugin } from "./plugin";
