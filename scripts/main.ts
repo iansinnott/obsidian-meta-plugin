@@ -3,8 +3,8 @@ import { weatherTool } from "@/src/llm/tools/weather";
 import { fmt, omit } from "@/src/llm/utils";
 import { transformAnthropicRequest } from "@/src/llm/utils/transformAnthropicRequest";
 import { createAnthropic, type AnthropicProviderOptions } from "@ai-sdk/anthropic";
-import { createFileEditorTool, fileEditorToolSchema } from "@/src/llm/tools/fileEditor";
-import { FILE_EDITOR_TOOL_NAME, createFileEditorAgent } from "@/src/llm/agents";
+import { createFileEditorTool } from "@/src/llm/tools/fileEditor";
+import { FILE_EDITOR_TOOL_NAME } from "@/src/llm/agents";
 
 import {
   generateId,
