@@ -95,6 +95,12 @@ This script will:
 5.  Create a Git tag for the new version (`bun run tag`).
 6.  Generate the distribution files (`bun run dist`).
 
+## Alternate taglines
+
+- The plugin that builds other plugins
+- The last plugin you'll ever need
+- You're own personal Obsidian dev team
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
