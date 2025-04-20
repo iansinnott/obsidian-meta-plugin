@@ -80,13 +80,20 @@ bun run version
 
 ## Release Process
 
-To create a new release:
+To create a new release, simply run the automated release script:
 
-1.  Update the version number in `package.json`
-2.  Build the plugin: `bun run build`
-3.  Bump the version number: `bun run version`
-4.  Tag the release in Git: `bun run tag`
-5.  Create the distribution files: `bun run dist`
+```bash
+bun run release
+```
+
+This script will:
+
+1.  Prompt you for the new version number (suggesting the next patch version).
+2.  Update the version in `package.json`.
+3.  Run the necessary build steps (`bun run build`).
+4.  Update `manifest.json` and `versions.json` based on the new version (`bun run version`).
+5.  Create a Git tag for the new version (`bun run tag`).
+6.  Generate the distribution files (`bun run dist`).
 
 ## License
 
