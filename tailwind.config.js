@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   prefix: "meta-",
+  darkMode: ["class", ".theme-dark"],
   corePlugins: {
     preflight: false,
   },

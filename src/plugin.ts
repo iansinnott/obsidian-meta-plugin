@@ -235,10 +235,25 @@ export class MetaPlugin extends Plugin {
     });
   }
 
+  /** Sets the data-theme attribute on the body based on Obsidian's theme, This is necessary because we use a prefix. */
+  private setThemeAttribute() {
+    if (document.body.classList.contains("theme-dark")) {
+      document.body.classList.add("meta-theme-dark");
+      document.body.classList.remove("theme-light");
+    } else {
+      document.body.classList.remove("meta-theme-dark");
+      document.body.classList.add("theme-light");
+    }
+  }
+
   async onload() {
     // Register the plugin instance for state delegation
     registerPluginInstance(this);
     await this.loadSettings();
+
+    // Set initial theme attribute and register listener for changes
+    this.setThemeAttribute();
+    this.registerEvent(this.app.workspace.on("css-change", this.setThemeAttribute));
 
     this.handleApiSettingsUpdate();
     // Restore last active conversation (or create new)
