@@ -72,6 +72,25 @@ export class MetaPlugin extends Plugin {
     if (!(await adapter.exists(convDir))) {
       await adapter.mkdir(convDir);
     }
+    // Persist active conversation ID to disk
+    await this.savePluginData("activeConversation.json", {
+      conversationId: this.currentConversationId,
+    });
+  }
+
+  /** Restore the last active conversation ID or start a new one */
+  public async restoreActiveConversation() {
+    const adapter = this.app.vault.adapter;
+    const path = require("path");
+    const dataDir = await this.ensureDataDir();
+    const filePath = path.join(dataDir, "activeConversation.json");
+    if (await adapter.exists(filePath)) {
+      const raw = await adapter.read(filePath);
+      const parsed = JSON.parse(raw);
+      this.currentConversationId = parsed.conversationId;
+    } else {
+      await this.startNewConversation();
+    }
   }
 
   /**
@@ -222,8 +241,8 @@ export class MetaPlugin extends Plugin {
     await this.loadSettings();
 
     this.handleApiSettingsUpdate();
-    // Start a fresh conversation on load
-    await this.startNewConversation();
+    // Restore last active conversation (or create new)
+    await this.restoreActiveConversation();
 
     // Register the sidebar view
     this.registerView(META_SIDEBAR_VIEW_TYPE, (leaf) => new MetaSidebarView(leaf, this));
