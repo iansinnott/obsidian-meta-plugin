@@ -56,12 +56,12 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string; threadId: stri
       data-calling-agent-id={callingAgentId}
       data-arg-agent-id={args.agentId}
       data-thread-id={threadId}
-      className={`${toolCallId} tool-call-container meta-rounded-lg meta-border meta-border-solid meta-border-gray-200 dark:meta-border-gray-700 meta-mt-2 meta-bg-black/10 dark:meta-bg-white/10`}
+      className={`${toolCallId} tool-call-container meta-rounded-lg meta-border meta-border-solid meta-border-gray-300 dark:meta-border-gray-700 meta-mt-2 meta-bg-gray-100 dark:meta-bg-gray-800/50`}
     >
       <div
         onClick={() => setIsOpen(!isOpen)}
         className={classNames(
-          "meta-p-2 meta-cursor-pointer meta-rounded-t-lg hover:meta-bg-gray-100/25 dark:hover:meta-bg-gray-800/25 meta-font-medium meta-flex meta-items-center meta-gap-2 meta-border-b meta-border-b-solid meta-border-gray-200 dark:meta-border-gray-700",
+          "meta-p-2 meta-cursor-pointer meta-rounded-t-lg hover:meta-bg-gray-200 dark:hover:meta-bg-gray-700/50 meta-font-medium meta-flex meta-items-center meta-gap-2 meta-border-b meta-border-b-solid meta-border-gray-300 dark:meta-border-gray-700",
           {
             "meta-border-b-0": !isOpen,
             "meta-border-b-1 meta-border-b-solid": isOpen,
@@ -113,7 +113,7 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string; threadId: stri
           >
             {isSubAgentCall && subAgentData ? (
               // Render a nested AgentResponseArea for sub-agent calls
-              <div className="meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-px-2">
+              <div className="meta-border-t meta-border-gray-300 dark:meta-border-gray-700 meta-px-2">
                 <AgentResponseArea
                   isLoading={isLoading}
                   messages={subAgentData.messages}
@@ -133,7 +133,7 @@ const ToolCallView: React.FC<ToolCall & { callingAgentId: string; threadId: stri
             )}
 
             {error && (
-              <code className="meta-p-3 meta-bg-red-50 dark:meta-bg-red-900/20 meta-block meta-text-xs meta-overflow-x-auto meta-border-t meta-border-gray-200 dark:meta-border-gray-700 meta-whitespace-pre meta-text-red-800 dark:meta-text-red-200">
+              <code className="meta-p-3 meta-bg-red-50 dark:meta-bg-red-900/20 meta-block meta-text-xs meta-overflow-x-auto meta-border-t meta-border-gray-300 dark:meta-border-gray-700 meta-whitespace-pre meta-text-red-800 dark:meta-text-red-200">
                 {JSON.stringify(error, null, 2)}
               </code>
             )}
