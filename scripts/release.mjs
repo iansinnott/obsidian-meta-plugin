@@ -74,6 +74,7 @@ async function main() {
   await runCommand("bun run version"); // This likely reads the new version from package.json
   await runCommand("bun run tag"); // This reads from manifest.json, which 'version' updates
   await runCommand("bun run dist");
+  await runCommand("git add package.json");
 
   console.log(`\\nRelease process completed for version ${newVersion}.`);
   rl.close();
