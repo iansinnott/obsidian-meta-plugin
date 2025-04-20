@@ -7,6 +7,7 @@
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"tag": "ovp_version=$(node -p 'require(\"./manifest.json\").version'); git tag -a v$ovp_version -m v$ovp_version",
 		"dist": "node scripts/create-dist.mjs"
 	},
 	"keywords": [ "obsidian", "plugin", "meta", "LLM" ],

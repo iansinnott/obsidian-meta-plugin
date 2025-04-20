@@ -78,6 +78,16 @@ bun run build
 bun run version
 ```
 
+## Release Process
+
+To create a new release:
+
+1.  Update the version number in `package.json`
+2.  Build the plugin: `bun run build`
+3.  Bump the version number: `bun run version`
+4.  Tag the release in Git: `bun run tag`
+5.  Create the distribution files: `bun run dist`
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).

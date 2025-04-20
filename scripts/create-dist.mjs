@@ -12,7 +12,14 @@ try {
   const version = manifest.version;
 
   // Files to include in the zip
-  const filesToZip = ["main.js", "styles.css", "manifest.json", "versions.json"];
+  const filesToZip = [
+    "main.js",
+    "styles.css",
+    "manifest.json",
+    "versions.json",
+    "README.md",
+    "LICENSE",
+  ];
 
   // Create releases directory if it doesn't exist
   const releasesDir = path.join(rootDir, "releases");
