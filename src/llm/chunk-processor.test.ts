@@ -475,6 +475,55 @@ const chunks_error1 = {
       },
     },
   ],
+  expectedOutput: [
+    {
+      role: "assistant",
+      content: [
+        {
+          type: "text",
+          text: "I'll help you check what themes are installed in your Obsidian vault. Let me delegate this task to the Obsidian plugin API expert who can access this information for you.",
+        },
+        {
+          type: "tool-call",
+          toolCallId: "toolu_01LnLW47grQEVTVKcfvW6UFG",
+          toolName: "delegateToAgent",
+          args: {
+            agentId: "obsidian plugin API",
+            prompt:
+              "Please check what themes are currently installed in the user's Obsidian vault and provide a list of them.",
+          },
+        },
+      ],
+      id: "msg-SvcHq4X0Fr31GawwrwowHvgV",
+    },
+    {
+      role: "tool",
+      id: "msg-toolu_01LnLW47grQEVTVKcfvW6UFG", // ID derived from toolCallId
+      content: [
+        {
+          type: "tool-result",
+          toolCallId: "toolu_01LnLW47grQEVTVKcfvW6UFG",
+          toolName: "delegateToAgent",
+          isError: true,
+          result: {
+            // The error object becomes the result
+            name: "AI_ToolExecutionError",
+            cause: {
+              stack:
+                "Error: Failed to execute 'structuredClone' on 'Window': #<Promise> could not be cloned.\n    at fn (plugin:obsidian-meta-plugin:33103:23)\n    at async eval (plugin:obsidian-meta-plugin:31132:22)\n    at async execute (plugin:obsidian-meta-plugin:35449:22)\n    at async eval (plugin:obsidian-meta-plugin:31132:22)",
+            },
+            toolArgs: {
+              agentId: "obsidian plugin API",
+              prompt:
+                "Please check what themes are currently installed in the user's Obsidian vault and provide a list of them.",
+            },
+            toolName: "delegateToAgent",
+            toolCallId: "toolu_01LnLW47grQEVTVKcfvW6UFG",
+          },
+        },
+      ],
+    },
+  ],
 };
 
 describe("ChunkProcessor", () => {
@@ -513,5 +562,18 @@ describe("ChunkProcessor", () => {
     // Test result should be null for this case
     const result = findToolResult(allChunks, toolCallId);
     expect(result).toBeNull();
+  });
+
+  test("should process tool use errors into messages", () => {
+    const chunkProcessor = new ChunkProcessor();
+
+    // Add all chunks from the error example
+    for (const chunk of chunks_error1.inputChunks) {
+      chunkProcessor.appendChunk(chunk);
+    }
+
+    const result = chunkProcessor.getMessages();
+    // @ts-ignore
+    expect(result).toEqual(chunks_error1.expectedOutput);
   });
 });

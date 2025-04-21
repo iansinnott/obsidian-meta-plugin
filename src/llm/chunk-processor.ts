@@ -17,6 +17,7 @@ interface ToolResultPart {
   toolCallId: string;
   toolName: string;
   result: any;
+  isError?: boolean;
 }
 
 type MessageContent = TextPart | ToolCallPart | ToolResultPart;
@@ -72,14 +73,33 @@ export class ChunkProcessor {
         this.addToolResult(chunk);
         break;
       case "error":
-      case "step-finish":
         this.finalizeCurrentMessage();
-        if (chunk.type === "error") {
+        // Create a tool message for tool execution errors
+        const err = chunk.error;
+        if (err && err.toolCallId && err.toolName) {
+          const toolMessage: Message = {
+            role: "tool",
+            id: "msg-" + err.toolCallId,
+            content: [
+              {
+                type: "tool-result",
+                toolCallId: err.toolCallId,
+                toolName: err.toolName,
+                result: err,
+                isError: true,
+              },
+            ],
+          };
+          this.messages.push(toolMessage);
+        } else {
           console.warn(`[ChunkProcessor] error:`, chunk);
           console.warn(
             `[ChunkProcessor]      : ai module doesn't report provider-specific errors. check event stream logs directly.`
           );
         }
+        break;
+      case "step-finish":
+        this.finalizeCurrentMessage();
         break;
       case "finish":
         // Nothing to do on final finish

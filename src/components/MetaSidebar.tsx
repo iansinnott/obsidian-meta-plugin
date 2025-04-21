@@ -8,6 +8,7 @@ import { PromptInput } from "./PromptInput";
 import { AgentResponseArea } from "./ResponseArea";
 import type { ResponseChunk } from "./types";
 import classNames from "classnames";
+import { generateId } from "ai";
 
 interface MetaSidebarProps {
   plugin: IMetaPlugin;
@@ -27,7 +28,7 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const threadId = "root";
-  const { messages, chunks, appendMessage, appendResponseChunk, reset, getMessages, getChunks } =
+  const { messages, chunks, appendMessage, appendResponseChunk, reset, getMessages } =
     useChunkedMessages(plugin.agent?.name, threadId);
 
   const handleSubmit = useCallback(
@@ -40,24 +41,17 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
         abortControllerRef.current?.abort();
       }
 
-      // Create a new AbortController for this request
+      // Set up loading and cancellation
       const controller = new AbortController();
       abortControllerRef.current = controller;
       setIsLoading(true);
 
-      console.log(
-        "%c[handleSubmit] abortControllerRef.current",
-        "color: red;",
-        abortControllerRef.current
-      );
-
       // Append the user's message
-      const userMessage: Message = {
+      appendMessage({
         role: "user",
         content: [{ type: "text", text: prompt }],
-        id: `user-${Date.now()}`,
-      };
-      appendMessage(userMessage);
+        id: generateId(),
+      } satisfies Message);
 
       try {
         if (plugin.agent) {
@@ -71,10 +65,7 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
               temperature: 0.2,
               abortSignal: controller.signal,
             },
-            {
-              ...ctx,
-              abortSignal: controller.signal,
-            }
+            ctx
           );
 
           for await (const chunk of stream.fullStream) {
