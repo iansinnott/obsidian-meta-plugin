@@ -6,6 +6,9 @@ export const DEFAULT_SETTINGS = {
   baseUrl: "https://api.openai.com",
   model: "",
   availableModels: [] as string[],
+  maxSteps: 20,
+  maxRetries: 2,
+  maxTokens: 8000,
 };
 
 export class MetaSettingTab extends PluginSettingTab {
@@ -131,5 +134,56 @@ export class MetaSettingTab extends PluginSettingTab {
           }
         });
     });
+
+    // Add advanced LLM settings
+    containerEl.createEl("h3", { text: "Advanced LLM Settings" });
+
+    new Setting(containerEl)
+      .setName("Max Steps")
+      .setDesc("Maximum number of steps the agent can take.")
+      .addText((text) =>
+        text
+          .setPlaceholder("35")
+          .setValue(String(this.plugin.settings.maxSteps))
+          .onChange(async (value) => {
+            const numValue = parseInt(value, 10);
+            if (!isNaN(numValue)) {
+              this.plugin.settings.maxSteps = numValue;
+              await this.plugin.saveSettings();
+            }
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Max Retries")
+      .setDesc("Maximum number of retries for failed steps.")
+      .addText((text) =>
+        text
+          .setPlaceholder("2")
+          .setValue(String(this.plugin.settings.maxRetries))
+          .onChange(async (value) => {
+            const numValue = parseInt(value, 10);
+            if (!isNaN(numValue)) {
+              this.plugin.settings.maxRetries = numValue;
+              await this.plugin.saveSettings();
+            }
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Max Tokens")
+      .setDesc("Maximum number of tokens for LLM responses.")
+      .addText((text) =>
+        text
+          .setPlaceholder("14000")
+          .setValue(String(this.plugin.settings.maxTokens))
+          .onChange(async (value) => {
+            const numValue = parseInt(value, 10);
+            if (!isNaN(numValue)) {
+              this.plugin.settings.maxTokens = numValue;
+              await this.plugin.saveSettings();
+            }
+          })
+      );
   }
 }

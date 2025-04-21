@@ -221,9 +221,9 @@ export class MetaPlugin extends Plugin {
       llm: this.llm,
       // @todo Should prob make this configurable from the settings tab.
       settings: {
-        maxSteps: 35,
-        maxRetries: 2,
-        maxTokens: 14_000,
+        maxSteps: this.settings.maxSteps,
+        maxRetries: this.settings.maxRetries,
+        maxTokens: this.settings.maxTokens,
       },
       obsidianPaths: {
         vaultPath: this.app.vault.adapter.getBasePath(),
