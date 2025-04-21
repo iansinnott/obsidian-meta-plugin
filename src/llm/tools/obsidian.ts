@@ -10,6 +10,7 @@ export const obsidianToolContextSchema = z.object({
   app: z.custom<App>(),
   plugin: z.custom<MetaPlugin>(),
   getProcessor: z.function().args(z.string(), z.string()).returns(z.custom<ChunkProcessor>()),
+  abortSignal: z.instanceof(AbortSignal).optional(),
 });
 
 export type ObsidianContext = z.infer<typeof obsidianToolContextSchema>;
@@ -614,8 +615,10 @@ export const toggleCssSnippetTool = tool({
 });
 
 export const togglePluginTool = tool({
-  description:
-    "Enable or disable an Obsidian plugin by ID. Use this to toggle plugins on or off programmatically.",
+  description: `Enable or disable an Obsidian plugin by ID. Use this to toggle plugins on
+  or off programmatically. IMPORTANT: If a new plugin was created and plugins
+    have not yet been reloaded, enabling it may fail. The user must first click
+  the "Reload plugins" button in Obsidian settings "Community plugins" tab.`,
   parameters: z.object({
     pluginId: z.string().describe("ID of the Obsidian plugin to toggle"),
     enabled: z.boolean().describe("Whether to enable (true) or disable (false) the plugin"),

@@ -1,3 +1,5 @@
+import type { streamText } from "ai";
+
 interface TextPart {
   type: "text";
   text: string;
@@ -24,6 +26,8 @@ export interface Message {
   content: MessageContent[];
   id: string;
 }
+
+type thang = ReturnType<typeof streamText>;
 
 /**
  * Incrementally process message stream chunks as they come in. These chunks
@@ -72,6 +76,9 @@ export class ChunkProcessor {
         this.finalizeCurrentMessage();
         if (chunk.type === "error") {
           console.warn(`[ChunkProcessor] error:`, chunk);
+          console.warn(
+            `[ChunkProcessor]      : ai module doesn't report provider-specific errors. check event stream logs directly.`
+          );
         }
         break;
       case "finish":

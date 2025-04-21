@@ -38,6 +38,8 @@ export const createDirectReportDelegationTool = <TContext>(
           maxRetries: agent.settings.maxRetries || 2,
           maxTokens: agent.settings.maxTokens || 8000,
           experimental_continueSteps: true,
+          // @ts-expect-error - @todo fix this - we didn't type the abort signal
+          abortSignal: options.context?.abortSignal,
         },
         options.context as any
       );
