@@ -52,10 +52,13 @@ export const searchVaultTool = tool({
       .describe(
         "Term to search for in the vault files. String literal. Regex not currently supported."
       ),
-    caseSensitive: z.boolean().optional().describe("Whether the search should be case sensitive"),
+    caseSensitive: z
+      .boolean()
+      .default(false)
+      .describe("Whether the search should be case sensitive"),
     fileExtensions: z
       .array(z.string())
-      .optional()
+      .default(["md", "txt"])
       .describe(
         "List of file extensions to search (e.g., ['md', 'txt']). If not provided, all files will be searched."
       ),
@@ -120,10 +123,13 @@ export const searchFilesByNameTool = tool({
     searchTerm: z
       .string()
       .describe("Term to search for in filenames. String literal. Regex not currently supported."),
-    caseSensitive: z.boolean().optional().describe("Whether the search should be case sensitive"),
+    caseSensitive: z
+      .boolean()
+      .default(false)
+      .describe("Whether the search should be case sensitive"),
     fileExtensions: z
       .array(z.string())
-      .optional()
+      .default(["md", "txt"])
       .describe(
         "List of file extensions to search (e.g., ['md', 'txt']). If not provided, all files will be searched."
       ),
@@ -176,7 +182,7 @@ export const createFileTool = tool({
     content: z.string().describe("Content to write to the new file"),
     overwrite: z
       .boolean()
-      .optional()
+      .default(false)
       .describe("Whether to overwrite an existing file. Defaults to false."),
   }),
   execute: async (
@@ -230,7 +236,7 @@ export const updateFileTool = tool({
     content: z.string().describe("New content for the file"),
     createIfNotExists: z
       .boolean()
-      .optional()
+      .default(false)
       .describe("Whether to create the file if it doesn't exist. Defaults to false."),
   }),
   execute: async (
@@ -311,7 +317,14 @@ export const obsidianAPITool = tool({
 
     try {
       const fn = new Function("app", functionBody);
-      const result = fn(app);
+      let result = fn(app);
+      const isThenable = typeof result === "object" && typeof result.then === "function";
+
+      // Check if the result is a Promise and await it if so. I've seen the
+      // model return a promise before, so we need to handle that case.
+      if (result instanceof Promise || isThenable) {
+        result = await result;
+      }
 
       return {
         success: true,
@@ -406,10 +419,9 @@ export const setThemeTool = tool({
   parameters: z.object({
     themeName: z.string().describe("The name of the theme to set. Must already be installed."),
     lightDarkMode: z
-      .enum(["light", "dark"])
-      .optional()
+      .enum(["light", "dark", "default"])
       .describe(
-        "The light/dark mode to set the theme to. In Obsidian 'light' corresponds to 'moonstone' and 'dark' corresponds to 'obsidian'."
+        "The light/dark mode to set the theme to. In Obsidian 'light' corresponds to 'moonstone' and 'dark' corresponds to 'obsidian'. 'default' is a noop and will not change the mode."
       ),
   }),
   execute: async (
@@ -423,7 +435,7 @@ export const setThemeTool = tool({
 
     app.customCss.setTheme(themeName);
 
-    if (lightDarkMode) {
+    if (lightDarkMode !== "default") {
       const newMode = { light: "moonstone", dark: "obsidian" }[lightDarkMode];
       app.changeTheme(newMode as "obsidian" | "moonstone" | "system");
     }
