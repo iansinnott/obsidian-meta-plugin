@@ -1,4 +1,4 @@
-import { gemma, haiku, llama4Maverick, llama4Scout, optimus, sonnet } from "@/src/llm/models";
+import { haiku, optimus, sonnet } from "@/src/llm/models";
 import { weatherTool } from "@/src/llm/tools/weather";
 import { fmt, omit } from "@/src/llm/utils";
 import { transformAnthropicRequest } from "@/src/llm/utils/transformAnthropicRequest";
@@ -34,12 +34,9 @@ const modelByArg = {
   sonnet: sonnet,
   haiku: haiku,
   optimus: optimus,
-  llama4Maverick: llama4Maverick,
-  llama4Scout: llama4Scout,
-  gemma: gemma,
 };
 
-const DEFAULT_MODEL = "llama4Maverick";
+const DEFAULT_MODEL = "sonnet";
 
 const commands: CLICommandSPec<CLIContext> = {
   /**

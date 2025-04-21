@@ -3,9 +3,10 @@ import React, { useState, useRef, useEffect } from "react";
 interface PromptInputProps {
   onSubmit: (prompt: string) => void;
   isLoading: boolean;
+  onCancel?: () => void;
 }
 
-export const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, isLoading }) => {
+export const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, isLoading, onCancel }) => {
   const [inputValue, setInputValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -56,19 +57,30 @@ export const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, isLoading })
           style={{ lineHeight: "normal" }}
         />
         <button
-          className="meta-absolute meta-right-2 meta-p-1 meta-text-blue-600 hover:meta-text-blue-800 dark:meta-text-blue-400 dark:hover:meta-text-blue-300 meta-bg-transparent meta-rounded-full disabled:meta-opacity-50 disabled:meta-cursor-not-allowed"
-          onClick={handleSubmit}
-          disabled={isLoading || !inputValue.trim()}
-          aria-label="Send message"
+          className="meta-absolute meta-right-2 meta-p-1 meta-bg-transparent meta-rounded-full disabled:meta-opacity-50 disabled:meta-cursor-not-allowed"
+          onClick={isLoading && onCancel ? onCancel : handleSubmit}
+          disabled={!isLoading && !inputValue.trim()}
+          aria-label={isLoading ? "Cancel" : "Send message"}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="meta-w-5 meta-h-5"
-          >
-            <path d="M3.478 2.404a.75.75 0 00-.926.941l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.404z" />
-          </svg>
+          {isLoading ? (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              className="meta-w-5 meta-h-5 meta-text-blue-600 dark:meta-text-blue-400"
+            >
+              <rect x="6" y="6" width="12" height="12" fill="currentColor" />
+            </svg>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="meta-w-5 meta-h-5 meta-text-blue-600 hover:meta-text-blue-800 dark:meta-text-blue-400 dark:hover:meta-text-blue-300"
+            >
+              <path d="M3.478 2.404a.75.75 0 00-.926.941l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.404z" />
+            </svg>
+          )}
         </button>
       </div>
     </div>

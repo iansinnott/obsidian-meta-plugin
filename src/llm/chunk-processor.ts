@@ -1,3 +1,5 @@
+import type { streamText } from "ai";
+
 interface TextPart {
   type: "text";
   text: string;
@@ -15,6 +17,7 @@ interface ToolResultPart {
   toolCallId: string;
   toolName: string;
   result: any;
+  isError?: boolean;
 }
 
 type MessageContent = TextPart | ToolCallPart | ToolResultPart;
@@ -24,6 +27,8 @@ export interface Message {
   content: MessageContent[];
   id: string;
 }
+
+type thang = ReturnType<typeof streamText>;
 
 /**
  * Incrementally process message stream chunks as they come in. These chunks
@@ -68,11 +73,33 @@ export class ChunkProcessor {
         this.addToolResult(chunk);
         break;
       case "error":
+        this.finalizeCurrentMessage();
+        // Create a tool message for tool execution errors
+        const err = chunk.error;
+        if (err && err.toolCallId && err.toolName) {
+          const toolMessage: Message = {
+            role: "tool",
+            id: "msg-" + err.toolCallId,
+            content: [
+              {
+                type: "tool-result",
+                toolCallId: err.toolCallId,
+                toolName: err.toolName,
+                result: err,
+                isError: true,
+              },
+            ],
+          };
+          this.messages.push(toolMessage);
+        } else {
+          console.warn(`[ChunkProcessor] error:`, chunk);
+          console.warn(
+            `[ChunkProcessor]      : ai module doesn't report provider-specific errors. check event stream logs directly.`
+          );
+        }
+        break;
       case "step-finish":
         this.finalizeCurrentMessage();
-        if (chunk.type === "error") {
-          console.warn(`[ChunkProcessor] error:`, chunk);
-        }
         break;
       case "finish":
         // Nothing to do on final finish
@@ -170,12 +197,62 @@ export class ChunkProcessor {
     }
   }
 
+  /**
+   * Get a copy of the messages array.
+   *
+   * This is important because the messages array is used internally by the
+   * ChunkProcessor and will be mutated as chunks are processed.
+   *
+   */
   getMessages(): Message[] {
-    return this.messages;
+    return this.messages.slice();
   }
 
+  /**
+   * Get a copy of the chunks array.
+   *
+   * This is important because the chunks array is used internally by the
+   * ChunkProcessor and will be mutated as chunks are processed.
+   *
+   */
   getChunks(): any[] {
-    return this.chunks;
+    return this.chunks.slice();
+  }
+
+  /**
+   * Print the current messages state to the console using console.table
+   * for debugging purposes.
+   */
+  debug() {
+    const tableData = [];
+    for (const message of this.messages) {
+      for (const part of message.content) {
+        let details = "";
+        switch (part.type) {
+          case "text":
+            details = part.text;
+            break;
+          case "tool-call":
+            details = `${part.toolName}(id=${part.toolCallId}, args=${JSON.stringify(part.args)})`;
+            break;
+          case "tool-result":
+            details = `${part.toolName}(id=${part.toolCallId}, result=${JSON.stringify(
+              part.result
+            )})${part.isError ? " [ERROR]" : ""}`;
+            break;
+          default:
+            // @ts-expect-error - Handle potential unknown part types
+            details = `Unknown part type: ${part.type}`;
+        }
+
+        tableData.push({
+          role: message.role,
+          type: part.type,
+          details: details,
+        });
+      }
+    }
+    console.table(tableData);
   }
 
   /**

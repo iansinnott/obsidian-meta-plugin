@@ -29,34 +29,51 @@ export const createDirectReportDelegationTool = <TContext>(
       if (!agent) {
         throw new Error(`Agent not found: ${agentId}`);
       }
+      try {
+        // Pass the task to the delegated agent and wait for completion
+        const subAgentStream = agent.streamText(
+          {
+            prompt,
+            maxSteps: agent.settings.maxSteps || 10,
+            maxRetries: agent.settings.maxRetries || 2,
+            maxTokens: agent.settings.maxTokens || 8000,
+            experimental_continueSteps: true,
+            abortSignal: options.abortSignal,
+          },
+          options.context as any
+        );
 
-      // Pass the task to the delegated agent and wait for completion
-      const subAgentStream = agent.streamText(
-        {
-          prompt,
-          maxSteps: agent.settings.maxSteps || 10,
-          maxRetries: agent.settings.maxRetries || 2,
-          maxTokens: agent.settings.maxTokens || 8000,
-          experimental_continueSteps: true,
-        },
-        options.context as any
-      );
+        // If we're passed a chunk processor use it to append all the chunks.
+        for await (const chunk of subAgentStream.fullStream) {
+          // Check for abort signal during streaming
+          if (options.abortSignal?.aborted) {
+            throw new Error("Delegation aborted by signal.");
+          }
+          onChunk?.({
+            agentId,
+            chunk,
+            toolCallId: options.toolCallId,
+            context: options.context as TContext,
+          });
+        }
 
-      // If we're passed a chunk processor use it to append all the chunks.
-      for await (const chunk of subAgentStream.fullStream) {
-        onChunk?.({
-          agentId,
-          chunk,
-          toolCallId: options.toolCallId,
-          context: options.context as TContext,
-        });
+        // Then it will be down
+        const response = await subAgentStream.response;
+        const lastMessage = response.messages?.at(-1);
+
+        // @ts-expect-error - assume the message type has text
+        return lastMessage?.content[0].text;
+      } catch (error: any) {
+        if (error.name === "AbortError" || error.message === "Delegation aborted by signal.") {
+          // Handle cancellation specifically
+          console.log(`Delegation to agent ${agentId} cancelled.`);
+          // Optionally return a specific message or re-throw a custom error
+          throw new Error(`Delegation to agent ${agentId} was cancelled.`);
+        } else {
+          // Handle other errors
+          console.error(`Error during delegation to agent ${agentId}:`, error);
+          throw error; // Re-throw the original error or a new one
+        }
       }
-
-      // Then it will be down
-      const response = await subAgentStream.response;
-      const lastMessage = response.messages?.at(-1);
-
-      // @ts-expect-error - assume the message type has text
-      return lastMessage?.content[0].text;
     },
   });
