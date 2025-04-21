@@ -220,6 +220,42 @@ export class ChunkProcessor {
   }
 
   /**
+   * Print the current messages state to the console using console.table
+   * for debugging purposes.
+   */
+  debug() {
+    const tableData = [];
+    for (const message of this.messages) {
+      for (const part of message.content) {
+        let details = "";
+        switch (part.type) {
+          case "text":
+            details = part.text;
+            break;
+          case "tool-call":
+            details = `${part.toolName}(id=${part.toolCallId}, args=${JSON.stringify(part.args)})`;
+            break;
+          case "tool-result":
+            details = `${part.toolName}(id=${part.toolCallId}, result=${JSON.stringify(
+              part.result
+            )})${part.isError ? " [ERROR]" : ""}`;
+            break;
+          default:
+            // @ts-expect-error - Handle potential unknown part types
+            details = `Unknown part type: ${part.type}`;
+        }
+
+        tableData.push({
+          role: message.role,
+          type: part.type,
+          details: details,
+        });
+      }
+    }
+    console.table(tableData);
+  }
+
+  /**
    * Used for user messages, which are never streamed and always fully formed
    * but need to go into the message stream.
    */
