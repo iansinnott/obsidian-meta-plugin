@@ -1,6 +1,8 @@
 // NOTE: Avoid importing directly from obsidian in this file, since it only works in Obisdian and thus breaks tests
 import type { App, MarkdownView, TFile } from "obsidian";
 
+import * as Obsidian from "obsidian";
+
 import type { MetaPlugin } from "@/src/plugin";
 import { tool, type ToolExecutionOptions } from "ai";
 import { z } from "zod";
@@ -291,14 +293,20 @@ export const obsidianAPITool = tool({
     Use the Obsidian API directly. This is an experimental tool and should be used with caution. Only use this tool when the other Obsidian tools are insufficient.
       
     IMPORTANT: Be very careful when using this tool. It provides full, unrestricted access to the Obsidian API, which allows destructive actions.
+    
+    Definitions:
+    - \`app\` is the Obsidian App instance.
+    - \`obsidian\` is the 'obsidian' module import. I.e. the result of \`require('obsidian')\` or \`import * as obsidian from 'obsidian'\`.
       
     How to use:
-    - Write a function body as a string that takes the Obsidian \`app\` instance as the first argument.
+    - Write a function body as a string that takes the Obsidian \`app\` instance as the first argument and the \`obsidian\` module as the second argument.
       - Example: \`"return typeof app === undefined;"\`. This will return \`false\`, since \`app\` is is the first argument and is defined.
-      - The string will be evaluated using the \`new Function\` constructor. \`new Function('app', yourCode)\`.
+      - The string will be evaluated using the \`new Function\` constructor. \`new Function('app', 'obsidian', yourCode)\`.
       - The App object is documented here, although full documentation is not provided: https://docs.obsidian.md/Reference/TypeScript+API/App. Make use of your expertise with Obsidian plugins to utilise this API.
     - Pass the function definition as a string to this tool.
-    - The function will be called with the Obsidian \`app\` instance as the first argument, and the return value of your function will be returned as the result of this tool.
+    - The function will be called with the Obsidian \`app\` instance as the first argument, and the \`obsidian\` module as the second argument.
+    - The return value of your function will be returned as the result of this tool.
+    - NOTE: The \`obsidian\` module is provided as an argument so that you do not need to \`require\` or \`import\` it in your function body. Neither of these are available in the global scope and will not be available to the function.
     - NOTE: A return value is not required. If your function has a return statement we will attempt to serialize the value using JSON.stringify.
     - NOTE: Any error thrown by your function will be caught and returned as an error object.
   `,
@@ -316,8 +324,8 @@ export const obsidianAPITool = tool({
     const { app } = options.context;
 
     try {
-      const fn = new Function("app", functionBody);
-      let result = fn(app);
+      const fn = new Function("app", "obsidian", functionBody);
+      let result = fn(app, Obsidian);
       const isThenable = typeof result === "object" && typeof result.then === "function";
 
       // Check if the result is a Promise and await it if so. I've seen the

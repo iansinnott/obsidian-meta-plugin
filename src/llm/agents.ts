@@ -296,28 +296,6 @@ const createObsidianPluginsAgent = ({
   settings?: AgentSettings;
   obsidianPaths: ObsidianPaths;
 }) => {
-  const agents = [
-    createFileEditorAgent({
-      llm,
-      settings,
-      obsidianPaths,
-      additionalInstructions: `
-        Your primary job scope is to do CRUD operations on the user's Obsidian
-        plugins.
-          
-        NOTE: When listing plugins, assume that any plugin's who's ID starts
-        with 'omp-' were authored by the 'Obsidian Meta Plugin' agent, i.e. the
-        controller of the system which you are a part of.
-
-        NOTE: When creating a plugin the manifest.json file should include
-        "Obsidian Meta Plugin" as the author. The ID should _start with_ 'omp-',
-        representing 'Obsidian Meta Plugin'. This will make it easier to
-        identify your plugins after the fact. The author URL should always be
-        'https://github.com/iansinnott/obsidian-meta-plugin'.
-        `,
-    }),
-  ];
-
   return new Agent({
     name: "obsidian plugin manager",
     instructions: `
@@ -357,30 +335,61 @@ Example:
 }
 \`\`\`
 
+NOTE: When creating a plugin the manifest.json file should include
+"Obsidian Meta Plugin" as the author. The ID should _start with_ 'omp-',
+representing 'Obsidian Meta Plugin'. This will make it easier to
+identify your plugins after the fact. The author URL should always be
+'https://github.com/iansinnott/obsidian-meta-plugin'.
+
 ==== Additional Considerations ====
   
 Avoid requiring a build step. In other words, DO NOT use TypeScript to write the
 plugin, use JavaScript. Use \`require\` to import modules. 
   
-In addition to your own tools, you have access to the following team members:
+==== Reading and Writing Files ====
 
-${agents
-  .map((agent) => {
-    return `- \`${agent.name}\`\n  This agent is instructed to: """${agent.instructions}"""`;
-  })
-  .join("\n")}
+You have access to the ${FILE_EDITOR_TOOL_NAME} tool which you can use to access
+the filesystem. 
+
+Your primary job scope with regard to the filesystem is to do CRUD operations on
+the user's Obsidian plugins. You help users manage their files effectively and safely.
+
+All files you work with will be in the user's Obsidian vault. Every file or
+directory path you request will be relative to the user's Obsidian vault.
+
+For example, if a user's vault is located at "/Users/john/Documents/Obsidian
+Vault" and they want you to edit the file "example.md" in the root of their
+vault, they would simply provide you with the path "example.md".
   
-Delegate to your team using the ${DELEGATE_TO_AGENT_TOOL_NAME} tool when needed.
+Alternatively, if you want to edit a nested file, you can provide a path like
+"notes/example.md" which would be the file "example.md" in the "notes" folder
+within the user's vault.
+
+Here are some paths that may come in handy: 
+
+- Config Path: ${obsidianPaths.configPath}
+- Plugins Path: ${obsidianPaths.pluginsPath}
+
+Of course content files can be placed anywhere within the vault path.
+
+IMPORTANT: All paths you provide should be relative paths. They will be interpreted as relative to the user's Obsidian vault.
+
+DEVELOPERS NOTE: Windows users will have a different path structure. Error messages should tell you if you're on a Windows system.
+  
+NOTE: When listing plugins, assume that any plugin's who's ID starts
+with 'omp-' were authored by the 'Obsidian Meta Plugin' agent, i.e. the
+controller of the system which you are a part of.
     `,
     model: llm,
     contextSchema: obsidianToolContextSchema,
     settings,
-    // @ts-expect-error - @todo We will need to fix this if we want to distribute the agent system
-    agents,
     tools: {
       listPlugins: listPluginsTool,
       togglePlugin: togglePluginTool,
       [OBSIDIAN_API_TOOL_NAME]: obsidianAPITool,
+      [FILE_EDITOR_TOOL_NAME]: createFileEditorTool({
+        basePath: obsidianPaths.vaultPath,
+      }),
     },
   });
 };

@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { z } from "zod";
 import { tool } from "ai";
+import { normalizePath } from "obsidian";
 
 // Schema for file editor tool commands
 // @todo - this should be a discriminated union type. note all the args are
@@ -42,35 +43,12 @@ const handleToolUse = async (
       throw new Error("path is required");
     }
 
-    // Check if the path already starts with the base path to avoid duplication
-    if (x.startsWith(context.basePath)) {
-      console.warn(
-        `Warning: Path "${x}" already includes base path "${context.basePath}". Stripping duplicate base path.`
-      );
-      const resolvedPath = path.resolve(x);
-
-      // Still verify the resolved path is within the base path for security
-      const normalizedBasePath = path.normalize(context.basePath);
-      const normalizedResolvedPath = path.normalize(resolvedPath);
-
-      if (!normalizedResolvedPath.startsWith(normalizedBasePath)) {
-        throw new Error(
-          `Security error: Attempted to access path outside of the allowed base directory: ${x}` +
-            `\n\nResolved path: ${resolvedPath}` +
-            `\n\nNormalized base path: ${normalizedBasePath}` +
-            `\n\nNormalized resolved path: ${normalizedResolvedPath}`
-        );
-      }
-
-      return resolvedPath;
-    }
-
     // Resolve the path relative to the base path
-    const resolvedPath = path.resolve(context.basePath, x);
+    const resolvedPath = normalizePath(path.resolve(context.basePath, x));
 
     // Ensure the resolved path is within the base path to prevent directory traversal
-    const normalizedBasePath = path.normalize(context.basePath);
-    const normalizedResolvedPath = path.normalize(resolvedPath);
+    const normalizedBasePath = normalizePath(context.basePath);
+    const normalizedResolvedPath = normalizePath(resolvedPath);
 
     if (!normalizedResolvedPath.startsWith(normalizedBasePath)) {
       throw new Error(
