@@ -646,16 +646,6 @@ export const togglePluginTool = tool({
         throw new Error("Plugin API not available");
       }
 
-      // Check if the plugin exists
-      const plugin = app.plugins.getPlugin(pluginId);
-
-      if (!plugin) {
-        return {
-          success: false,
-          message: `Plugin '${pluginId}' not found. Please check the plugin ID.`,
-        };
-      }
-
       // Toggle the plugin
       if (enabled) {
         await app.plugins.enablePluginAndSave(pluginId);
