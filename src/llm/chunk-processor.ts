@@ -197,12 +197,26 @@ export class ChunkProcessor {
     }
   }
 
+  /**
+   * Get a copy of the messages array.
+   *
+   * This is important because the messages array is used internally by the
+   * ChunkProcessor and will be mutated as chunks are processed.
+   *
+   */
   getMessages(): Message[] {
-    return this.messages;
+    return this.messages.slice();
   }
 
+  /**
+   * Get a copy of the chunks array.
+   *
+   * This is important because the chunks array is used internally by the
+   * ChunkProcessor and will be mutated as chunks are processed.
+   *
+   */
   getChunks(): any[] {
-    return this.chunks;
+    return this.chunks.slice();
   }
 
   /**

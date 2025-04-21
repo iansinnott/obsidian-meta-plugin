@@ -576,4 +576,22 @@ describe("ChunkProcessor", () => {
     // @ts-ignore
     expect(result).toEqual(chunks_error1.expectedOutput);
   });
+
+  test("messages not passed by reference", () => {
+    const p = new ChunkProcessor();
+    p.appendMessage({
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: "Hello, world!",
+        },
+      ],
+      id: "msg-123",
+    });
+    const messages = p.getMessages();
+
+    expect(p.getMessages()).not.toBe(messages);
+    expect(p.getMessages()).toEqual(messages);
+  });
 });
