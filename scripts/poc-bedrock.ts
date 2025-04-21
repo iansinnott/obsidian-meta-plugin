@@ -15,6 +15,10 @@ const bedrock = createAmazonBedrock({
 const SONNET_ARN =
   "arn:aws:bedrock:us-east-1:327006722363:inference-profile/us.anthropic.claude-3-7-sonnet-20250219-v1:0";
 
+/**
+ * See also
+ * @see {@link https://sdk.vercel.ai/providers/ai-sdk-providers/amazon-bedrock}
+ */
 const sonnet = bedrock(SONNET_ARN);
 
 (async () => {
