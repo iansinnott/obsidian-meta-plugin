@@ -67,7 +67,7 @@ export const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, isLoading, o
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
-              className="meta-w-5 meta-h-5 meta-text-blue-600 dark:meta-text-blue-400"
+              className="meta-w-5 meta-h-5 meta-text-blue-600 dark:meta-text-blue-400 meta-animate-pulse"
             >
               <rect x="6" y="6" width="12" height="12" fill="currentColor" />
             </svg>
