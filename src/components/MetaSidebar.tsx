@@ -55,10 +55,14 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
 
       try {
         if (plugin.agent) {
+          const messages = getMessages();
+
+          console.log("%c[handleSubmit] messages", "color: lime;", messages);
+
           const stream = plugin.agent.streamText(
             {
               // @ts-expect-error - some deeply nested thing
-              messages: getMessages(),
+              messages,
               maxSteps: plugin.agent.settings.maxSteps || 10,
               maxRetries: plugin.agent.settings.maxRetries || 2,
               maxTokens: plugin.agent.settings.maxTokens || 8000,
