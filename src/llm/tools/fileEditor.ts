@@ -72,13 +72,6 @@ const handleToolUse = async (
     const normalizedBasePath = path.normalize(context.basePath);
     const normalizedResolvedPath = path.normalize(resolvedPath);
 
-    console.log("file editor doing stuff", {
-      x,
-      resolvedPath,
-      normalizedBasePath,
-      normalizedResolvedPath,
-    });
-
     if (!normalizedResolvedPath.startsWith(normalizedBasePath)) {
       throw new Error(
         `Security error: Attempted to access path outside of the base directory: ${x}`
