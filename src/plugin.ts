@@ -219,7 +219,6 @@ export class MetaPlugin extends Plugin {
 
     this.agent = createTeamManagerAgent({
       llm: this.llm,
-      // @todo Should prob make this configurable from the settings tab.
       settings: {
         maxSteps: this.settings.maxSteps,
         maxRetries: this.settings.maxRetries,
@@ -256,6 +255,7 @@ export class MetaPlugin extends Plugin {
     this.registerEvent(this.app.workspace.on("css-change", this.setThemeAttribute));
 
     this.handleApiSettingsUpdate();
+
     // Restore last active conversation (or create new)
     await this.restoreActiveConversation();
 
@@ -267,13 +267,6 @@ export class MetaPlugin extends Plugin {
       // Called when the user clicks the icon.
       activateSidebarView(this);
     });
-
-    // Perform additional things with the ribbon
-    ribbonIconEl.addClass("my-plugin-ribbon-class");
-
-    // This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-    const statusBarItemEl = this.addStatusBarItem();
-    statusBarItemEl.setText("Status Bar Text");
 
     // This adds a simple command that can be triggered anywhere
     this.addCommand({
@@ -294,8 +287,6 @@ export class MetaPlugin extends Plugin {
     });
 
     const settingsTab = new MetaSettingTab(this.app, this);
-
-    // This adds a settings tab so the user can configure various aspects of the plugin
     this.addSettingTab(settingsTab);
   }
 
