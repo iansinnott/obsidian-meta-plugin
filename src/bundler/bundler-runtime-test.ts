@@ -2,13 +2,15 @@
  * Example demonstrating how to use the esbuild bundler to create an Obsidian plugin
  */
 
-import { normalizePath } from "obsidian";
-import type { MetaPlugin } from "./plugin";
+import type { MetaPlugin } from "../plugin";
 
 /**
  * Creates a sample plugin to test the bundler functionality
  */
-export async function createSamplePlugin(plugin: MetaPlugin) {
+export async function createSamplePlugin(
+  plugin: MetaPlugin,
+  normalizePath: (path: string) => string
+) {
   try {
     // First, create the sample plugin files on disk
     const path = require("path");
@@ -76,7 +78,10 @@ export default class SamplePlugin extends Plugin {
 /**
  * Creates a more advanced plugin to test the bundler functionality with multiple files
  */
-export async function createAdvancedPlugin(plugin: MetaPlugin) {
+export async function createAdvancedPlugin(
+  plugin: MetaPlugin,
+  normalizePath: (path: string) => string
+) {
   try {
     // First, create the advanced plugin files on disk
     const path = require("path");

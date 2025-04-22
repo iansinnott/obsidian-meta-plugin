@@ -8,13 +8,8 @@ import { META_SIDEBAR_VIEW_TYPE, MetaSidebarView, activateSidebarView } from "./
 import { transformAnthropicRequest } from "./llm/utils/transformAnthropicRequest";
 import { ChunkProcessor } from "./llm/chunk-processor";
 import { registerPluginInstance } from "./hooks/state";
-import {
-  createBundler,
-  type VaultAdapter,
-  type BundlerOptions,
-  type BundleResult,
-} from "./bundler";
-import { createAdvancedPlugin, createSamplePlugin } from "./bundler-test";
+import type { VaultAdapter, BundlerOptions, BundleResult, WASMBundler } from "./bundler/bundler";
+import { createAdvancedPlugin, createSamplePlugin } from "./bundler/bundler-runtime-test";
 
 export class MetaPlugin extends Plugin {
   settings: typeof DEFAULT_SETTINGS;
@@ -32,7 +27,7 @@ export class MetaPlugin extends Plugin {
   // Current conversation identifier
   private currentConversationId: string = "";
   // bundler instance for plugin bundling
-  private bundler: ReturnType<typeof createBundler> | undefined;
+  private bundler: WASMBundler | undefined;
 
   async ensureDataDir(subDir = "") {
     const path = require("path");
@@ -258,9 +253,11 @@ export class MetaPlugin extends Plugin {
    */
   async initializeEsbuild() {
     if (!this.bundler) {
+      const { createBundler } = await import("./bundler/bundler");
       this.bundler = createBundler(
         this.app.vault.adapter as unknown as VaultAdapter,
-        this.ensureDataDir.bind(this)
+        normalizePath,
+        this
       );
     }
     await this.bundler!.initialize();
@@ -287,9 +284,6 @@ export class MetaPlugin extends Plugin {
     this.registerEvent(this.app.workspace.on("css-change", this.setThemeAttribute));
 
     this.handleApiSettingsUpdate();
-
-    // Initialize bundler in the background
-    this.initializeEsbuild().catch(console.error);
 
     // Restore last active conversation (or create new)
     await this.restoreActiveConversation();
@@ -318,7 +312,7 @@ export class MetaPlugin extends Plugin {
       name: "Test Bundler: Create Sample Plugin",
       callback: async () => {
         try {
-          const result = await createSamplePlugin(this);
+          const result = await createSamplePlugin(this, normalizePath);
           if (result.success) {
             new Notice(`Sample Plugin bundled successfully at: ${result.outputPath}`, 5000);
           } else {
@@ -337,7 +331,7 @@ export class MetaPlugin extends Plugin {
       name: "Test Bundler: Create Advanced Plugin",
       callback: async () => {
         try {
-          const result = await createAdvancedPlugin(this);
+          const result = await createAdvancedPlugin(this, normalizePath);
           if (result.success) {
             new Notice(`Advanced Plugin bundled successfully at: ${result.outputPath}`, 5000);
           } else {

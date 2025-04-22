@@ -1,6 +1,6 @@
 import * as esbuild from "esbuild-wasm";
-import { normalizePath } from "obsidian";
 import path from "path";
+import type { MetaPlugin } from "../plugin";
 
 /**
  * Interface for the subset of Vault adapter methods needed for bundling.
@@ -31,6 +31,8 @@ export interface BundleResult {
   error?: any;
 }
 
+export type WASMBundler = ReturnType<typeof createBundler>;
+
 /**
  * Create a bundler instance that encapsulates esbuild initialization and bundle logic.
  * @param adapter VaultAdapter to read/write files in tests or runtime.
@@ -40,9 +42,12 @@ export interface BundleResult {
  */
 export function createBundler(
   adapter: VaultAdapter,
-  ensureDataDir: (subDir?: string) => Promise<string>
+  normalizePath: (path: string) => string,
+  plugin: MetaPlugin
 ) {
   let esbuildInitialized = false;
+  console.log("plugin", plugin);
+  const pluginPath = path.join(plugin.app.plugins!.getPluginFolder(), plugin.manifest.id);
 
   /** Initialize esbuild-wasm with local caching or CDN fallback. */
   async function initialize(): Promise<void> {
@@ -50,31 +55,20 @@ export function createBundler(
 
     try {
       // Prepare WASM cache directory
-      const esbuildDir = await ensureDataDir("esbuild");
-      const wasmPath = normalizePath(path.join(esbuildDir, "esbuild.wasm"));
-
-      // Download WASM binary if missing
-      if (!(await adapter.exists(wasmPath))) {
-        const wasmURL = "https://unpkg.com/esbuild-wasm@0.25.2/esbuild.wasm";
-        const response = await fetch(wasmURL);
-        if (!response.ok) {
-          throw new Error(`Failed to download esbuild.wasm: ${response.statusText}`);
-        }
-        const arrayBuffer = await response.arrayBuffer();
-        await adapter.writeBinary(wasmPath, arrayBuffer);
-      }
+      const wasmPath = normalizePath(path.join(pluginPath, "esbuild-0.25.2.wasm"));
 
       try {
         // Try initializing with local WASM file
         const wasmURL = adapter.getResourcePath(wasmPath);
         await esbuild.initialize({ wasmURL, worker: false });
         esbuildInitialized = true;
-        console.log("esbuild initialized with local WASM file");
+        console.log("esbuild initialized with local WASM file", wasmURL);
       } catch (localError) {
         console.warn(
           "Failed to initialize esbuild with local WASM file, falling back to CDN:",
           localError
         );
+
         // Fallback to CDN
         await esbuild.initialize({
           wasmURL: "https://unpkg.com/esbuild-wasm@0.25.2/esbuild.wasm",
