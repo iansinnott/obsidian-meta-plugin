@@ -1,4 +1,4 @@
-import { Plugin, normalizePath } from "obsidian";
+import { Plugin, normalizePath, Notice } from "obsidian";
 import { createAnthropic, type AnthropicProvider } from "@ai-sdk/anthropic";
 import type { LanguageModelV1 } from "ai";
 import { createOpenAI, type OpenAIProvider } from "@ai-sdk/openai";
@@ -9,6 +9,8 @@ import { META_SIDEBAR_VIEW_TYPE, MetaSidebarView, activateSidebarView } from "./
 import { transformAnthropicRequest } from "./llm/utils/transformAnthropicRequest";
 import { ChunkProcessor } from "./llm/chunk-processor";
 import { registerPluginInstance } from "./hooks/state";
+import * as esbuild from "esbuild-wasm";
+import { createSamplePlugin } from "./bundler-test";
 
 export class MetaPlugin extends Plugin {
   settings: typeof DEFAULT_SETTINGS;
@@ -25,6 +27,8 @@ export class MetaPlugin extends Plugin {
   private subscribersMap: Map<string, Set<() => void>> = new Map();
   // Current conversation identifier
   private currentConversationId: string = "";
+  // esbuild instance
+  private esbuildInitialized: boolean = false;
 
   async ensureDataDir(subDir = "") {
     const path = require("path");
@@ -245,6 +249,230 @@ export class MetaPlugin extends Plugin {
     }
   }
 
+  /**
+   * Initialize esbuild-wasm for bundling
+   */
+  async initializeEsbuild() {
+    if (this.esbuildInitialized) return;
+
+    try {
+      const path = require("path");
+      const adapter = this.app.vault.adapter;
+      const esbuildDir = await this.ensureDataDir("esbuild");
+      const wasmPath: string = normalizePath(path.join(esbuildDir, "esbuild.wasm"));
+
+      // Check if wasm binary exists, if not, we need to download it
+      if (!(await adapter.exists(wasmPath))) {
+        // Create URL for the esbuild.wasm file from the CDN
+        const wasmURL = "https://unpkg.com/esbuild-wasm@0.25.2/esbuild.wasm";
+
+        // Fetch the wasm file
+        const response = await fetch(wasmURL);
+        if (!response.ok) {
+          throw new Error(`Failed to download esbuild.wasm: ${response.statusText}`);
+        }
+
+        // Convert to arraybuffer and save to disk
+        const arrayBuffer = await response.arrayBuffer();
+        await adapter.writeBinary(wasmPath, arrayBuffer);
+      }
+
+      try {
+        // First attempt: Try with local WASM file
+        // Get the URL to the wasm file in the vault
+        const wasmURL = adapter.getResourcePath(wasmPath);
+
+        // Initialize esbuild with the wasm binary
+        await esbuild.initialize({
+          wasmURL,
+          worker: false, // Try without worker mode first for debugging
+        });
+
+        this.esbuildInitialized = true;
+        console.log("esbuild initialized with local WASM file");
+      } catch (localError) {
+        console.warn(
+          "Failed to initialize esbuild with local WASM file, falling back to CDN:",
+          localError
+        );
+
+        // Second attempt: Try with direct CDN URL
+        // This might work better in some environments
+        try {
+          await esbuild.initialize({
+            wasmURL: "https://unpkg.com/esbuild-wasm@0.25.2/esbuild.wasm",
+            worker: false,
+          });
+
+          this.esbuildInitialized = true;
+          console.log("esbuild initialized with CDN WASM file");
+        } catch (cdnError) {
+          console.error("Failed to initialize esbuild with CDN WASM file:", cdnError);
+          throw cdnError;
+        }
+      }
+    } catch (error) {
+      console.error("Failed to initialize esbuild:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Bundle a plugin project from source files
+   * @param files Record of file paths to file contents
+   * @param entryPoint The main entry point file (typically main.ts or index.ts)
+   * @param outputPath Where to write the bundled plugin (relative to plugins folder)
+   */
+  async bundlePlugin(files: Record<string, string>, entryPoint: string, outputPath: string) {
+    if (!this.esbuildInitialized) {
+      await this.initializeEsbuild();
+    }
+
+    try {
+      console.log(`[bundler] Starting bundling for entry point: ${entryPoint}`);
+      console.log(`[bundler] Available files:`, Object.keys(files));
+
+      // Ensure the manifest.json exists
+      const manifestFile = Object.keys(files).find((file) => file.endsWith("manifest.json"));
+      if (!manifestFile) {
+        throw new Error("manifest.json is required for an Obsidian plugin");
+      }
+
+      // Create a virtual file system plugin for esbuild
+      const virtualFilePlugin: esbuild.Plugin = {
+        name: "virtual-files",
+        setup(build: esbuild.PluginBuild) {
+          // Resolve virtual file paths
+          build.onResolve({ filter: /.*/ }, (args: esbuild.OnResolveArgs) => {
+            console.log(`[esbuild] Resolving: ${args.path} from ${args.importer}`);
+
+            // Handle relative imports - might need to add extensions
+            if (args.path.startsWith(".")) {
+              // Try exact match first
+              if (files[args.path]) {
+                console.log(`[esbuild] Found exact match for ${args.path}`);
+                return { path: args.path, namespace: "virtual-fs" };
+              }
+
+              // Try adding extensions
+              const extensions = [".ts", ".tsx", ".js", ".jsx", ".json"];
+              for (const ext of extensions) {
+                const pathWithExt = args.path + ext;
+                if (files[pathWithExt]) {
+                  console.log(`[esbuild] Found with extension: ${pathWithExt}`);
+                  return { path: pathWithExt, namespace: "virtual-fs" };
+                }
+              }
+
+              // Try resolving index files in directories
+              for (const ext of extensions) {
+                const indexPath = args.path + "/index" + ext;
+                if (files[indexPath]) {
+                  console.log(`[esbuild] Found index file: ${indexPath}`);
+                  return { path: indexPath, namespace: "virtual-fs" };
+                }
+              }
+
+              console.log(`[esbuild] Could not resolve relative import: ${args.path}`);
+              console.log(`[esbuild] Available files:`, Object.keys(files));
+            }
+            // Direct file reference without relative path
+            else if (files[args.path]) {
+              console.log(`[esbuild] Found direct reference: ${args.path}`);
+              return { path: args.path, namespace: "virtual-fs" };
+            }
+
+            // External packages that would be in node_modules
+            console.log(`[esbuild] Treating as external: ${args.path}`);
+            return { path: args.path, external: true };
+          });
+
+          // Load virtual files from our files object
+          build.onLoad({ filter: /.*/, namespace: "virtual-fs" }, (args: esbuild.OnLoadArgs) => {
+            console.log(`[esbuild] Loading: ${args.path}`);
+
+            // Get the file content from our files object
+            const contents = files[args.path];
+            if (contents) {
+              // Determine the loader based on file extension
+              const ext = args.path.split(".").pop()?.toLowerCase();
+              const loader =
+                ext === "ts" || ext === "tsx"
+                  ? "tsx"
+                  : ext === "jsx"
+                  ? "jsx"
+                  : ext === "json"
+                  ? "json"
+                  : "js";
+
+              console.log(`[esbuild] Loaded ${args.path} with loader: ${loader}`);
+              return { contents, loader: loader as esbuild.Loader };
+            }
+
+            // File not found in our virtual filesystem
+            console.error(`[esbuild] File not found in virtual filesystem: ${args.path}`);
+            return { errors: [{ text: `File not found: ${args.path}` }] };
+          });
+        },
+      };
+
+      // Run esbuild
+      const result = await esbuild.build({
+        entryPoints: [entryPoint],
+        bundle: true,
+        write: false,
+        format: "cjs",
+        platform: "browser",
+        target: "es2018",
+        plugins: [virtualFilePlugin],
+        minify: false,
+        treeShaking: true,
+        logLevel: "info", // Enable logging for debugging
+      });
+
+      if (result.outputFiles && result.outputFiles.length > 0) {
+        const bundledCode = result.outputFiles[0].text;
+
+        // Ensure the output directory exists
+        const adapter = this.app.vault.adapter;
+        const path = require("path");
+        const pluginsFolder = this.app.plugins?.getPluginFolder();
+        const targetPluginDir = normalizePath(path.join(pluginsFolder, outputPath));
+
+        if (!(await adapter.exists(targetPluginDir))) {
+          await adapter.mkdir(targetPluginDir);
+        }
+
+        // Write the main.js file
+        const mainJsPath = normalizePath(path.join(targetPluginDir, "main.js"));
+        await adapter.write(mainJsPath, bundledCode);
+
+        // Copy the manifest.json file
+        const manifestContent = files[manifestFile];
+        const manifestPath = normalizePath(path.join(targetPluginDir, "manifest.json"));
+        await adapter.write(manifestPath, manifestContent);
+
+        console.log(`[bundler] Plugin files written to: ${targetPluginDir}`);
+        console.log(`[bundler] - main.js: ${mainJsPath}`);
+        console.log(`[bundler] - manifest.json: ${manifestPath}`);
+
+        return {
+          success: true,
+          outputPath: targetPluginDir,
+          files: {
+            mainJs: mainJsPath,
+            manifest: manifestPath,
+          },
+        };
+      } else {
+        throw new Error("No output generated from esbuild");
+      }
+    } catch (error) {
+      console.error("Bundle failed:", error);
+      return { success: false, error };
+    }
+  }
+
   async onload() {
     // Register the plugin instance for state delegation
     registerPluginInstance(this);
@@ -255,6 +483,9 @@ export class MetaPlugin extends Plugin {
     this.registerEvent(this.app.workspace.on("css-change", this.setThemeAttribute));
 
     this.handleApiSettingsUpdate();
+
+    // Initialize esbuild in the background
+    this.initializeEsbuild().catch(console.error);
 
     // Restore last active conversation (or create new)
     await this.restoreActiveConversation();
@@ -286,11 +517,36 @@ export class MetaPlugin extends Plugin {
       },
     });
 
+    // Add a command to test the bundler functionality
+    this.addCommand({
+      id: "test-bundler-sample-plugin",
+      name: "Test Bundler: Create Sample Plugin",
+      callback: async () => {
+        try {
+          const result = await createSamplePlugin(this);
+          if (result.success) {
+            new Notice(`Plugin bundled successfully at: ${result.outputPath}`, 5000);
+          } else {
+            new Notice(`Plugin bundling failed: ${result.error}`, 5000);
+          }
+        } catch (error) {
+          console.error("Error testing bundler:", error);
+          new Notice("Error testing bundler. Check console for details.", 5000);
+        }
+      },
+    });
+
     const settingsTab = new MetaSettingTab(this.app, this);
     this.addSettingTab(settingsTab);
   }
 
   onunload() {
+    // Shutdown esbuild if it was initialized
+    if (this.esbuildInitialized) {
+      esbuild.stop();
+      this.esbuildInitialized = false;
+    }
+
     // Detach any leaves with our view type
     this.app.workspace.detachLeavesOfType(META_SIDEBAR_VIEW_TYPE);
   }

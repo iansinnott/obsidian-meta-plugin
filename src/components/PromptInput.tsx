@@ -45,17 +45,19 @@ export const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, isLoading, o
   return (
     <div className="meta-mt-2">
       <div className="meta-relative meta-flex meta-items-center">
-        <textarea
-          ref={textareaRef}
-          className="meta-w-full meta-p-2 meta-pr-10 meta-rounded-md meta-border meta-border-gray-300 dark:meta-border-gray-600 dark:meta-bg-gray-800 meta-text-gray-900 dark:meta-text-gray-100 meta-resize-none meta-focus:ring-2 meta-focus:ring-blue-500 meta-focus:border-blue-500 meta-outline-none meta-transition meta-min-h-[40px] meta-overflow-hidden"
-          placeholder="What can we do for you?"
-          rows={1}
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={isLoading}
-          style={{ lineHeight: "normal" }}
-        />
+        <div className={`meta-w-full ${isLoading ? "meta-rotating-border-wrapper" : ""}`}>
+          <textarea
+            ref={textareaRef}
+            className="meta-w-full meta-p-2 meta-pr-10 meta-rounded-md meta-border meta-border-gray-300 dark:meta-border-gray-600 dark:meta-bg-gray-800 meta-text-gray-900 dark:meta-text-gray-100 meta-resize-none meta-focus:ring-2 meta-focus:ring-blue-500 meta-focus:border-blue-500 meta-outline-none meta-transition meta-min-h-[40px] meta-overflow-hidden"
+            placeholder="What can we do for you?"
+            rows={1}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isLoading}
+            style={{ lineHeight: "normal" }}
+          />
+        </div>
         <button
           className="meta-absolute meta-right-2 meta-p-1 meta-bg-transparent meta-rounded-full disabled:meta-opacity-50 disabled:meta-cursor-not-allowed"
           onClick={isLoading && onCancel ? onCancel : handleSubmit}
