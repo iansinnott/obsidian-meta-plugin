@@ -10,7 +10,7 @@ import { MetaPlugin } from "./plugin";
 export async function createSamplePlugin(plugin: MetaPlugin) {
   // Define the files in our virtual filesystem
   const files: Record<string, string> = {
-    "./main.ts": `
+    "./main": `
 import { Plugin, Notice } from 'obsidian';
 import { getGreeting } from './utils';
 
@@ -34,7 +34,7 @@ export default class SamplePlugin extends Plugin {
   }
 }
 `,
-    "./utils.ts": `
+    "./utils": `
 /**
  * A simple utility function
  */
@@ -42,7 +42,7 @@ export function getGreeting(name: string): string {
   return \`Hello, \${name}! Welcome to your Obsidian plugin.\`;
 }
 `,
-    "manifest.json": `
+    "./manifest.json": `
 {
   "id": "sample-generated-plugin",
   "name": "Sample Generated Plugin",
@@ -58,7 +58,7 @@ export function getGreeting(name: string): string {
 
   try {
     // Bundle the plugin
-    const result = await plugin.bundlePlugin(files, "./main.ts", "sample-generated-plugin");
+    const result = await plugin.bundlePlugin(files, "./main", "sample-generated-plugin");
 
     if (result.success) {
       console.log("Plugin successfully bundled:", result.outputPath);
@@ -84,7 +84,7 @@ export function getGreeting(name: string): string {
 export async function createAdvancedPlugin(plugin: MetaPlugin) {
   // Define files with more advanced TypeScript features
   const files: Record<string, string> = {
-    "main.ts": `
+    "./main": `
 import { Plugin, Notice, Menu, Editor, MarkdownView } from 'obsidian';
 import { SettingsTab, PluginSettings, DEFAULT_SETTINGS } from './settings';
 import { processText, TextProcessor } from './text-processor';
@@ -150,7 +150,7 @@ export default class AdvancedPlugin extends Plugin {
   }
 }
 `,
-    "settings.ts": `
+    "./settings": `
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type AdvancedPlugin from './main';
 
@@ -251,7 +251,7 @@ export class SettingsTab extends PluginSettingTab {
   }
 }
 `,
-    "text-processor.ts": `
+    "./text-processor": `
 import type { PluginSettings } from './settings';
 
 export class TextProcessor {
@@ -295,7 +295,7 @@ export class TextProcessor {
   }
 }
 `,
-    "manifest.json": `
+    "./manifest.json": `
 {
   "id": "advanced-generated-plugin",
   "name": "Advanced Generated Plugin",
@@ -311,7 +311,7 @@ export class TextProcessor {
 
   try {
     // Bundle the plugin
-    const result = await plugin.bundlePlugin(files, "main.ts", "advanced-generated-plugin");
+    const result = await plugin.bundlePlugin(files, "./main", "advanced-generated-plugin");
 
     if (result.success) {
       console.log("Advanced plugin successfully bundled:", result.outputPath);

@@ -3,14 +3,13 @@ import { createAnthropic, type AnthropicProvider } from "@ai-sdk/anthropic";
 import type { LanguageModelV1 } from "ai";
 import { createOpenAI, type OpenAIProvider } from "@ai-sdk/openai";
 import { createTeamManagerAgent } from "./llm/agents";
-import { SampleModal } from "./modal";
 import { DEFAULT_SETTINGS, MetaSettingTab } from "./settings";
 import { META_SIDEBAR_VIEW_TYPE, MetaSidebarView, activateSidebarView } from "./sidebar";
 import { transformAnthropicRequest } from "./llm/utils/transformAnthropicRequest";
 import { ChunkProcessor } from "./llm/chunk-processor";
 import { registerPluginInstance } from "./hooks/state";
 import * as esbuild from "esbuild-wasm";
-import { createSamplePlugin } from "./bundler-test";
+import { createAdvancedPlugin, createSamplePlugin } from "./bundler-test";
 
 export class MetaPlugin extends Plugin {
   settings: typeof DEFAULT_SETTINGS;
@@ -397,13 +396,15 @@ export class MetaPlugin extends Plugin {
               // Determine the loader based on file extension
               const ext = args.path.split(".").pop()?.toLowerCase();
               const loader =
-                ext === "ts" || ext === "tsx"
+                ext === "tsx"
                   ? "tsx"
                   : ext === "jsx"
                   ? "jsx"
+                  : ext === "js"
+                  ? "js"
                   : ext === "json"
                   ? "json"
-                  : "js";
+                  : "ts"; // Default to 'ts' for .ts files and potentially others
 
               console.log(`[esbuild] Loaded ${args.path} with loader: ${loader}`);
               return { contents, loader: loader as esbuild.Loader };
@@ -499,15 +500,6 @@ export class MetaPlugin extends Plugin {
       activateSidebarView(this);
     });
 
-    // This adds a simple command that can be triggered anywhere
-    this.addCommand({
-      id: "open-sample-modal-simple",
-      name: "Open sample modal (simple)",
-      callback: () => {
-        new SampleModal(this.app, this).open();
-      },
-    });
-
     // Add command to open the sidebar view
     this.addCommand({
       id: "open-meta-sidebar",
@@ -525,13 +517,32 @@ export class MetaPlugin extends Plugin {
         try {
           const result = await createSamplePlugin(this);
           if (result.success) {
-            new Notice(`Plugin bundled successfully at: ${result.outputPath}`, 5000);
+            new Notice(`Sample Plugin bundled successfully at: ${result.outputPath}`, 5000);
           } else {
-            new Notice(`Plugin bundling failed: ${result.error}`, 5000);
+            new Notice(`Sample Plugin bundling failed: ${result.error}`, 5000);
           }
         } catch (error) {
-          console.error("Error testing bundler:", error);
-          new Notice("Error testing bundler. Check console for details.", 5000);
+          console.error("Error testing bundler (Sample Plugin):", error);
+          new Notice("Error testing bundler (Sample Plugin). Check console for details.", 5000);
+        }
+      },
+    });
+
+    // Add a command to test the bundler with the advanced plugin
+    this.addCommand({
+      id: "test-bundler-advanced-plugin",
+      name: "Test Bundler: Create Advanced Plugin",
+      callback: async () => {
+        try {
+          const result = await createAdvancedPlugin(this);
+          if (result.success) {
+            new Notice(`Advanced Plugin bundled successfully at: ${result.outputPath}`, 5000);
+          } else {
+            new Notice(`Advanced Plugin bundling failed: ${result.error}`, 5000);
+          }
+        } catch (error) {
+          console.error("Error testing bundler (Advanced Plugin):", error);
+          new Notice("Error testing bundler (Advanced Plugin). Check console for details.", 5000);
         }
       },
     });
