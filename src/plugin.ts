@@ -8,7 +8,12 @@ import { META_SIDEBAR_VIEW_TYPE, MetaSidebarView, activateSidebarView } from "./
 import { transformAnthropicRequest } from "./llm/utils/transformAnthropicRequest";
 import { ChunkProcessor } from "./llm/chunk-processor";
 import { registerPluginInstance } from "./hooks/state";
-import * as esbuild from "esbuild-wasm";
+import {
+  createBundler,
+  type VaultAdapter,
+  type BundlerOptions,
+  type BundleResult,
+} from "./bundler";
 import { createAdvancedPlugin, createSamplePlugin } from "./bundler-test";
 
 export class MetaPlugin extends Plugin {
@@ -26,8 +31,8 @@ export class MetaPlugin extends Plugin {
   private subscribersMap: Map<string, Set<() => void>> = new Map();
   // Current conversation identifier
   private currentConversationId: string = "";
-  // esbuild instance
-  private esbuildInitialized: boolean = false;
+  // bundler instance for plugin bundling
+  private bundler: ReturnType<typeof createBundler> | undefined;
 
   async ensureDataDir(subDir = "") {
     const path = require("path");
@@ -249,291 +254,27 @@ export class MetaPlugin extends Plugin {
   }
 
   /**
-   * Initialize esbuild-wasm for bundling
+   * Initialize bundler
    */
   async initializeEsbuild() {
-    if (this.esbuildInitialized) return;
-
-    try {
-      const path = require("path");
-      const adapter = this.app.vault.adapter;
-      const esbuildDir = await this.ensureDataDir("esbuild");
-      const wasmPath: string = normalizePath(path.join(esbuildDir, "esbuild.wasm"));
-
-      // Check if wasm binary exists, if not, we need to download it
-      if (!(await adapter.exists(wasmPath))) {
-        // Create URL for the esbuild.wasm file from the CDN
-        const wasmURL = "https://unpkg.com/esbuild-wasm@0.25.2/esbuild.wasm";
-
-        // Fetch the wasm file
-        const response = await fetch(wasmURL);
-        if (!response.ok) {
-          throw new Error(`Failed to download esbuild.wasm: ${response.statusText}`);
-        }
-
-        // Convert to arraybuffer and save to disk
-        const arrayBuffer = await response.arrayBuffer();
-        await adapter.writeBinary(wasmPath, arrayBuffer);
-      }
-
-      try {
-        // First attempt: Try with local WASM file
-        // Get the URL to the wasm file in the vault
-        const wasmURL = adapter.getResourcePath(wasmPath);
-
-        // Initialize esbuild with the wasm binary
-        await esbuild.initialize({
-          wasmURL,
-          worker: false, // Try without worker mode first for debugging
-        });
-
-        this.esbuildInitialized = true;
-        console.log("esbuild initialized with local WASM file");
-      } catch (localError) {
-        console.warn(
-          "Failed to initialize esbuild with local WASM file, falling back to CDN:",
-          localError
-        );
-
-        // Second attempt: Try with direct CDN URL
-        // This might work better in some environments
-        try {
-          await esbuild.initialize({
-            wasmURL: "https://unpkg.com/esbuild-wasm@0.25.2/esbuild.wasm",
-            worker: false,
-          });
-
-          this.esbuildInitialized = true;
-          console.log("esbuild initialized with CDN WASM file");
-        } catch (cdnError) {
-          console.error("Failed to initialize esbuild with CDN WASM file:", cdnError);
-          throw cdnError;
-        }
-      }
-    } catch (error) {
-      console.error("Failed to initialize esbuild:", error);
-      throw error;
+    if (!this.bundler) {
+      this.bundler = createBundler(
+        this.app.vault.adapter as unknown as VaultAdapter,
+        this.ensureDataDir.bind(this)
+      );
     }
+    await this.bundler!.initialize();
   }
 
   /**
    * Bundle a plugin project from source files
-   * @param entryPointPath The main entry point file path (typically main.ts)
-   * @param options Optional bundling options
    */
-  async bundlePlugin(
+  public async bundlePlugin(
     entryPointPath: string,
-    options: { sourcemap?: boolean } = { sourcemap: false }
-  ): Promise<{
-    success: boolean;
-    outputPath?: string;
-    error?: any;
-  }> {
-    if (!this.esbuildInitialized) {
-      await this.initializeEsbuild();
-    }
-
-    try {
-      const path = require("path");
-      const adapter = this.app.vault.adapter;
-      const vaultBasePath = adapter.getBasePath();
-
-      // If the path is relative to the vault, make it absolute
-      let absoluteEntryPath: string;
-      if (path.isAbsolute(entryPointPath)) {
-        absoluteEntryPath = entryPointPath;
-      } else {
-        absoluteEntryPath = path.join(vaultBasePath, entryPointPath);
-      }
-
-      console.log(`[bundler] Absolute entry path: ${absoluteEntryPath}`);
-
-      // Ensure entrypoint exists
-      if (!(await adapter.exists(entryPointPath))) {
-        throw new Error(`Entry point does not exist: ${entryPointPath}`);
-      }
-
-      // Determine output directory - same as entrypoint
-      const outputDir = path.dirname(entryPointPath);
-      const manifestPath = path.join(outputDir, "manifest.json");
-
-      // Ensure manifest.json exists
-      if (!(await adapter.exists(manifestPath))) {
-        throw new Error("manifest.json not found in plugin directory");
-      }
-
-      console.log(`[bundler] Starting bundling for entry point: ${entryPointPath}`);
-
-      // Create a filesystem plugin for esbuild
-      const obsidianFsPlugin: esbuild.Plugin = {
-        name: "obsidian-fs",
-        setup: (build: esbuild.PluginBuild) => {
-          // Track resolved paths to avoid duplicating the vault path
-          const resolvedPaths = new Map<string, string>();
-
-          // Register the entrypoint
-          resolvedPaths.set(entryPointPath, absoluteEntryPath);
-
-          // Handle file resolution
-          build.onResolve({ filter: /.*/ }, (args: esbuild.OnResolveArgs) => {
-            console.log(`[esbuild] Resolving: ${args.path} from ${args.importer}`);
-
-            // If it's an external package (not a relative or absolute path)
-            if (!args.path.startsWith(".") && !path.isAbsolute(args.path)) {
-              console.log(`[esbuild] Treating as external: ${args.path}`);
-              return { path: args.path, external: true };
-            }
-
-            // Resolve the absolute path
-            let resolvedPath: string;
-
-            if (path.isAbsolute(args.path)) {
-              // Path is already absolute
-              resolvedPath = args.path;
-            } else if (args.importer) {
-              // Path is relative to an importer
-              const importerDir = path.dirname(resolvedPaths.get(args.importer) || args.importer);
-              resolvedPath = path.join(importerDir, args.path);
-            } else {
-              // Path is relative to the vault
-              resolvedPath = path.join(vaultBasePath, args.path);
-            }
-
-            // Store the resolved path for future imports
-            resolvedPaths.set(args.path, resolvedPath);
-
-            console.log(`[esbuild] Resolved to: ${resolvedPath}`);
-            return { path: resolvedPath, namespace: "obsidian-fs" };
-          });
-
-          // Load files from disk
-          build.onLoad(
-            { filter: /.*/, namespace: "obsidian-fs" },
-            async (args: esbuild.OnLoadArgs) => {
-              console.log(`[esbuild] Loading: ${args.path}`);
-
-              try {
-                // Convert absolute path back to vault-relative for adapter
-                const vaultRelativePath = args.path.startsWith(vaultBasePath)
-                  ? args.path.slice(vaultBasePath.length + 1)
-                  : args.path;
-
-                let filePath = args.path;
-                let vaultPath = vaultRelativePath;
-
-                // If the exact file exists, use it
-                if (await adapter.exists(vaultPath)) {
-                  const contents = await adapter.read(vaultPath);
-                  const ext = path.extname(filePath).slice(1).toLowerCase();
-                  const loader =
-                    ext === "tsx"
-                      ? "tsx"
-                      : ext === "jsx"
-                      ? "jsx"
-                      : ext === "js"
-                      ? "js"
-                      : ext === "json"
-                      ? "json"
-                      : "ts";
-
-                  console.log(`[esbuild] Loaded ${vaultPath} with loader: ${loader}`);
-                  return { contents, loader: loader as esbuild.Loader };
-                }
-
-                // Try adding extensions if no extension
-                if (!path.extname(filePath)) {
-                  const extensions = [".ts", ".tsx", ".js", ".jsx", ".json"];
-                  for (const ext of extensions) {
-                    const pathWithExt = vaultPath + ext;
-                    if (await adapter.exists(pathWithExt)) {
-                      const contents = await adapter.read(pathWithExt);
-                      const loaderExt = ext.slice(1).toLowerCase();
-                      const loader =
-                        loaderExt === "tsx"
-                          ? "tsx"
-                          : loaderExt === "jsx"
-                          ? "jsx"
-                          : loaderExt === "js"
-                          ? "js"
-                          : loaderExt === "json"
-                          ? "json"
-                          : "ts";
-
-                      console.log(`[esbuild] Loaded ${pathWithExt} with loader: ${loader}`);
-                      return { contents, loader: loader as esbuild.Loader };
-                    }
-                  }
-
-                  // Check for index files
-                  for (const ext of extensions) {
-                    const indexPath = path.join(vaultPath, `index${ext}`);
-                    if (await adapter.exists(indexPath)) {
-                      const contents = await adapter.read(indexPath);
-                      const loaderExt = ext.slice(1).toLowerCase();
-                      const loader =
-                        loaderExt === "tsx"
-                          ? "tsx"
-                          : loaderExt === "jsx"
-                          ? "jsx"
-                          : loaderExt === "js"
-                          ? "js"
-                          : loaderExt === "json"
-                          ? "json"
-                          : "ts";
-
-                      console.log(`[esbuild] Loaded ${indexPath} with loader: ${loader}`);
-                      return { contents, loader: loader as esbuild.Loader };
-                    }
-                  }
-                }
-
-                // File not found in filesystem
-                console.error(`[esbuild] File not found in filesystem: ${vaultPath}`);
-                return { errors: [{ text: `File not found: ${vaultPath}` }] };
-              } catch (error) {
-                console.error(`[esbuild] Error loading ${args.path}:`, error);
-                return { errors: [{ text: `Error loading ${args.path}: ${error.message}` }] };
-              }
-            }
-          );
-        },
-      };
-
-      // Run esbuild
-      const result = await esbuild.build({
-        entryPoints: [absoluteEntryPath],
-        bundle: true,
-        write: false,
-        format: "cjs",
-        platform: "browser",
-        target: "es2018",
-        plugins: [obsidianFsPlugin],
-        minify: false,
-        sourcemap: options.sourcemap,
-        treeShaking: true,
-        logLevel: "info",
-      });
-
-      if (result.outputFiles && result.outputFiles.length > 0) {
-        const bundledCode = result.outputFiles[0].text;
-
-        // Write the main.js file
-        const mainJsPath = path.join(outputDir, "main.js");
-        await adapter.write(mainJsPath, bundledCode);
-
-        console.log(`[bundler] Plugin bundled successfully: ${mainJsPath}`);
-
-        return {
-          success: true,
-          outputPath: mainJsPath,
-        };
-      } else {
-        throw new Error("No output generated from esbuild");
-      }
-    } catch (error) {
-      console.error("Bundle failed:", error);
-      return { success: false, error };
-    }
+    options: BundlerOptions = { sourcemap: false }
+  ): Promise<BundleResult> {
+    await this.initializeEsbuild();
+    return this.bundler!.bundle(entryPointPath, options);
   }
 
   async onload() {
@@ -547,7 +288,7 @@ export class MetaPlugin extends Plugin {
 
     this.handleApiSettingsUpdate();
 
-    // Initialize esbuild in the background
+    // Initialize bundler in the background
     this.initializeEsbuild().catch(console.error);
 
     // Restore last active conversation (or create new)
@@ -614,10 +355,10 @@ export class MetaPlugin extends Plugin {
   }
 
   onunload() {
-    // Shutdown esbuild if it was initialized
-    if (this.esbuildInitialized) {
-      esbuild.stop();
-      this.esbuildInitialized = false;
+    // Shutdown bundler if it was initialized
+    if (this.bundler) {
+      this.bundler.stop();
+      this.bundler = undefined;
     }
 
     // Detach any leaves with our view type
