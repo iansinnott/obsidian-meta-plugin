@@ -24,6 +24,7 @@ import {
   togglePluginTool,
   updateFileTool,
 } from "./tools/obsidian";
+import { bundleTSSourceTool } from "./tools/bundler-tools";
 
 export const DELEGATE_TO_AGENT_TOOL_NAME = "delegateToAgent";
 export const OBSIDIAN_API_TOOL_NAME = "obsidianAPITool";
@@ -308,10 +309,10 @@ user desires.
   
 ==== Obsidian Plugin Basic Structure ====
 
-Obsidian plugins requre (at least) the following files:
+Obsidian plugins require (at least) the following files:
 
 - manifest.json
-- main.js
+- main.ts (will be bundled into main.js)
 - styles.css
 
 ==== Obsidian Plugin Manifest File ====
@@ -343,8 +344,10 @@ identify your plugins after the fact. The author URL should always be
 
 ==== Additional Considerations ====
   
-Avoid requiring a build step. In other words, DO NOT use TypeScript to write the
-plugin, use JavaScript. Use \`require\` to import modules. 
+Do NOT create a build step. You have a tool to bundle TypeScript into JavaScript.
+In other words, DO use TypeScript to write the plugin. Implicit \`any\` is allowed,
+so don't worry too much about types. Use \`import\`/\`export\` syntax to import/export
+modules, NOT \`require\`/\`module.exports\`.
   
 ==== Reading and Writing Files ====
 
@@ -379,13 +382,23 @@ DEVELOPERS NOTE: Windows users will have a different path structure. Error messa
 NOTE: When listing plugins, assume that any plugin's who's ID starts
 with 'omp-' were authored by the 'Obsidian Meta Plugin' agent, i.e. the
 controller of the system which you are a part of.
+  
+==== Bundling TypeScript ====
+
+You can bundle a TypeScript main.ts file into a JavaScript main.js file using the
+bundleMainTS tool.
+
+You will need to run this on your main.ts file after writing your plugin.
+
     `,
     model: llm,
     contextSchema: obsidianToolContextSchema,
     settings,
     tools: {
       listPlugins: listPluginsTool,
-      togglePlugin: togglePluginTool,
+      // @note Disabled for now. Seemed finnicky. Ask the user to do it.
+      // togglePlugin: togglePluginTool,
+      bundleMainTS: bundleTSSourceTool,
       [OBSIDIAN_API_TOOL_NAME]: obsidianAPITool,
       [FILE_EDITOR_TOOL_NAME]: createFileEditorTool({
         basePath: obsidianPaths.vaultPath,
@@ -503,9 +516,13 @@ delegating. The UI will display a tool call message box to the user which makes
 it redundant to mention it in prose. For example, do not preface with "Now I
 will delegate...".
 
+Carefully consider your team members' responses before continuing.
+
 You can also utilize the obsidian API _directly_, but this is highly
 discouraged. Please only use this functionality when you're team is unable to
-handle a user request.`,
+handle a user request.
+
+DO NOT show the user source code unless they ask for it.`,
     model: llm,
     contextSchema: obsidianToolContextSchema,
     // @ts-expect-error @todo We will need to fix this if we want to distribute the agent system - something about the streams
