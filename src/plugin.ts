@@ -318,152 +318,214 @@ export class MetaPlugin extends Plugin {
 
   /**
    * Bundle a plugin project from source files
-   * @param files Record of file paths to file contents
-   * @param entryPoint The main entry point file (typically main.ts or index.ts)
-   * @param outputPath Where to write the bundled plugin (relative to plugins folder)
+   * @param entryPointPath The main entry point file path (typically main.ts)
+   * @param options Optional bundling options
    */
-  async bundlePlugin(files: Record<string, string>, entryPoint: string, outputPath: string) {
+  async bundlePlugin(
+    entryPointPath: string,
+    options: { sourcemap?: boolean } = { sourcemap: false }
+  ): Promise<{
+    success: boolean;
+    outputPath?: string;
+    error?: any;
+  }> {
     if (!this.esbuildInitialized) {
       await this.initializeEsbuild();
     }
 
     try {
-      console.log(`[bundler] Starting bundling for entry point: ${entryPoint}`);
-      console.log(`[bundler] Available files:`, Object.keys(files));
+      const path = require("path");
+      const adapter = this.app.vault.adapter;
+      const vaultBasePath = adapter.getBasePath();
 
-      // Ensure the manifest.json exists
-      const manifestFile = Object.keys(files).find((file) => file.endsWith("manifest.json"));
-      if (!manifestFile) {
-        throw new Error("manifest.json is required for an Obsidian plugin");
+      // If the path is relative to the vault, make it absolute
+      let absoluteEntryPath: string;
+      if (path.isAbsolute(entryPointPath)) {
+        absoluteEntryPath = entryPointPath;
+      } else {
+        absoluteEntryPath = path.join(vaultBasePath, entryPointPath);
       }
 
-      // Create a virtual file system plugin for esbuild
-      const virtualFilePlugin: esbuild.Plugin = {
-        name: "virtual-files",
-        setup(build: esbuild.PluginBuild) {
-          // Resolve virtual file paths
+      console.log(`[bundler] Absolute entry path: ${absoluteEntryPath}`);
+
+      // Ensure entrypoint exists
+      if (!(await adapter.exists(entryPointPath))) {
+        throw new Error(`Entry point does not exist: ${entryPointPath}`);
+      }
+
+      // Determine output directory - same as entrypoint
+      const outputDir = path.dirname(entryPointPath);
+      const manifestPath = path.join(outputDir, "manifest.json");
+
+      // Ensure manifest.json exists
+      if (!(await adapter.exists(manifestPath))) {
+        throw new Error("manifest.json not found in plugin directory");
+      }
+
+      console.log(`[bundler] Starting bundling for entry point: ${entryPointPath}`);
+
+      // Create a filesystem plugin for esbuild
+      const obsidianFsPlugin: esbuild.Plugin = {
+        name: "obsidian-fs",
+        setup: (build: esbuild.PluginBuild) => {
+          // Track resolved paths to avoid duplicating the vault path
+          const resolvedPaths = new Map<string, string>();
+
+          // Register the entrypoint
+          resolvedPaths.set(entryPointPath, absoluteEntryPath);
+
+          // Handle file resolution
           build.onResolve({ filter: /.*/ }, (args: esbuild.OnResolveArgs) => {
             console.log(`[esbuild] Resolving: ${args.path} from ${args.importer}`);
 
-            // Handle relative imports - might need to add extensions
-            if (args.path.startsWith(".")) {
-              // Try exact match first
-              if (files[args.path]) {
-                console.log(`[esbuild] Found exact match for ${args.path}`);
-                return { path: args.path, namespace: "virtual-fs" };
-              }
-
-              // Try adding extensions
-              const extensions = [".ts", ".tsx", ".js", ".jsx", ".json"];
-              for (const ext of extensions) {
-                const pathWithExt = args.path + ext;
-                if (files[pathWithExt]) {
-                  console.log(`[esbuild] Found with extension: ${pathWithExt}`);
-                  return { path: pathWithExt, namespace: "virtual-fs" };
-                }
-              }
-
-              // Try resolving index files in directories
-              for (const ext of extensions) {
-                const indexPath = args.path + "/index" + ext;
-                if (files[indexPath]) {
-                  console.log(`[esbuild] Found index file: ${indexPath}`);
-                  return { path: indexPath, namespace: "virtual-fs" };
-                }
-              }
-
-              console.log(`[esbuild] Could not resolve relative import: ${args.path}`);
-              console.log(`[esbuild] Available files:`, Object.keys(files));
-            }
-            // Direct file reference without relative path
-            else if (files[args.path]) {
-              console.log(`[esbuild] Found direct reference: ${args.path}`);
-              return { path: args.path, namespace: "virtual-fs" };
+            // If it's an external package (not a relative or absolute path)
+            if (!args.path.startsWith(".") && !path.isAbsolute(args.path)) {
+              console.log(`[esbuild] Treating as external: ${args.path}`);
+              return { path: args.path, external: true };
             }
 
-            // External packages that would be in node_modules
-            console.log(`[esbuild] Treating as external: ${args.path}`);
-            return { path: args.path, external: true };
+            // Resolve the absolute path
+            let resolvedPath: string;
+
+            if (path.isAbsolute(args.path)) {
+              // Path is already absolute
+              resolvedPath = args.path;
+            } else if (args.importer) {
+              // Path is relative to an importer
+              const importerDir = path.dirname(resolvedPaths.get(args.importer) || args.importer);
+              resolvedPath = path.join(importerDir, args.path);
+            } else {
+              // Path is relative to the vault
+              resolvedPath = path.join(vaultBasePath, args.path);
+            }
+
+            // Store the resolved path for future imports
+            resolvedPaths.set(args.path, resolvedPath);
+
+            console.log(`[esbuild] Resolved to: ${resolvedPath}`);
+            return { path: resolvedPath, namespace: "obsidian-fs" };
           });
 
-          // Load virtual files from our files object
-          build.onLoad({ filter: /.*/, namespace: "virtual-fs" }, (args: esbuild.OnLoadArgs) => {
-            console.log(`[esbuild] Loading: ${args.path}`);
+          // Load files from disk
+          build.onLoad(
+            { filter: /.*/, namespace: "obsidian-fs" },
+            async (args: esbuild.OnLoadArgs) => {
+              console.log(`[esbuild] Loading: ${args.path}`);
 
-            // Get the file content from our files object
-            const contents = files[args.path];
-            if (contents) {
-              // Determine the loader based on file extension
-              const ext = args.path.split(".").pop()?.toLowerCase();
-              const loader =
-                ext === "tsx"
-                  ? "tsx"
-                  : ext === "jsx"
-                  ? "jsx"
-                  : ext === "js"
-                  ? "js"
-                  : ext === "json"
-                  ? "json"
-                  : "ts"; // Default to 'ts' for .ts files and potentially others
+              try {
+                // Convert absolute path back to vault-relative for adapter
+                const vaultRelativePath = args.path.startsWith(vaultBasePath)
+                  ? args.path.slice(vaultBasePath.length + 1)
+                  : args.path;
 
-              console.log(`[esbuild] Loaded ${args.path} with loader: ${loader}`);
-              return { contents, loader: loader as esbuild.Loader };
+                let filePath = args.path;
+                let vaultPath = vaultRelativePath;
+
+                // If the exact file exists, use it
+                if (await adapter.exists(vaultPath)) {
+                  const contents = await adapter.read(vaultPath);
+                  const ext = path.extname(filePath).slice(1).toLowerCase();
+                  const loader =
+                    ext === "tsx"
+                      ? "tsx"
+                      : ext === "jsx"
+                      ? "jsx"
+                      : ext === "js"
+                      ? "js"
+                      : ext === "json"
+                      ? "json"
+                      : "ts";
+
+                  console.log(`[esbuild] Loaded ${vaultPath} with loader: ${loader}`);
+                  return { contents, loader: loader as esbuild.Loader };
+                }
+
+                // Try adding extensions if no extension
+                if (!path.extname(filePath)) {
+                  const extensions = [".ts", ".tsx", ".js", ".jsx", ".json"];
+                  for (const ext of extensions) {
+                    const pathWithExt = vaultPath + ext;
+                    if (await adapter.exists(pathWithExt)) {
+                      const contents = await adapter.read(pathWithExt);
+                      const loaderExt = ext.slice(1).toLowerCase();
+                      const loader =
+                        loaderExt === "tsx"
+                          ? "tsx"
+                          : loaderExt === "jsx"
+                          ? "jsx"
+                          : loaderExt === "js"
+                          ? "js"
+                          : loaderExt === "json"
+                          ? "json"
+                          : "ts";
+
+                      console.log(`[esbuild] Loaded ${pathWithExt} with loader: ${loader}`);
+                      return { contents, loader: loader as esbuild.Loader };
+                    }
+                  }
+
+                  // Check for index files
+                  for (const ext of extensions) {
+                    const indexPath = path.join(vaultPath, `index${ext}`);
+                    if (await adapter.exists(indexPath)) {
+                      const contents = await adapter.read(indexPath);
+                      const loaderExt = ext.slice(1).toLowerCase();
+                      const loader =
+                        loaderExt === "tsx"
+                          ? "tsx"
+                          : loaderExt === "jsx"
+                          ? "jsx"
+                          : loaderExt === "js"
+                          ? "js"
+                          : loaderExt === "json"
+                          ? "json"
+                          : "ts";
+
+                      console.log(`[esbuild] Loaded ${indexPath} with loader: ${loader}`);
+                      return { contents, loader: loader as esbuild.Loader };
+                    }
+                  }
+                }
+
+                // File not found in filesystem
+                console.error(`[esbuild] File not found in filesystem: ${vaultPath}`);
+                return { errors: [{ text: `File not found: ${vaultPath}` }] };
+              } catch (error) {
+                console.error(`[esbuild] Error loading ${args.path}:`, error);
+                return { errors: [{ text: `Error loading ${args.path}: ${error.message}` }] };
+              }
             }
-
-            // File not found in our virtual filesystem
-            console.error(`[esbuild] File not found in virtual filesystem: ${args.path}`);
-            return { errors: [{ text: `File not found: ${args.path}` }] };
-          });
+          );
         },
       };
 
       // Run esbuild
       const result = await esbuild.build({
-        entryPoints: [entryPoint],
+        entryPoints: [absoluteEntryPath],
         bundle: true,
         write: false,
         format: "cjs",
         platform: "browser",
         target: "es2018",
-        plugins: [virtualFilePlugin],
+        plugins: [obsidianFsPlugin],
         minify: false,
+        sourcemap: options.sourcemap,
         treeShaking: true,
-        logLevel: "info", // Enable logging for debugging
+        logLevel: "info",
       });
 
       if (result.outputFiles && result.outputFiles.length > 0) {
         const bundledCode = result.outputFiles[0].text;
 
-        // Ensure the output directory exists
-        const adapter = this.app.vault.adapter;
-        const path = require("path");
-        const pluginsFolder = this.app.plugins?.getPluginFolder();
-        const targetPluginDir = normalizePath(path.join(pluginsFolder, outputPath));
-
-        if (!(await adapter.exists(targetPluginDir))) {
-          await adapter.mkdir(targetPluginDir);
-        }
-
         // Write the main.js file
-        const mainJsPath = normalizePath(path.join(targetPluginDir, "main.js"));
+        const mainJsPath = path.join(outputDir, "main.js");
         await adapter.write(mainJsPath, bundledCode);
 
-        // Copy the manifest.json file
-        const manifestContent = files[manifestFile];
-        const manifestPath = normalizePath(path.join(targetPluginDir, "manifest.json"));
-        await adapter.write(manifestPath, manifestContent);
-
-        console.log(`[bundler] Plugin files written to: ${targetPluginDir}`);
-        console.log(`[bundler] - main.js: ${mainJsPath}`);
-        console.log(`[bundler] - manifest.json: ${manifestPath}`);
+        console.log(`[bundler] Plugin bundled successfully: ${mainJsPath}`);
 
         return {
           success: true,
-          outputPath: targetPluginDir,
-          files: {
-            mainJs: mainJsPath,
-            manifest: manifestPath,
-          },
+          outputPath: mainJsPath,
         };
       } else {
         throw new Error("No output generated from esbuild");
