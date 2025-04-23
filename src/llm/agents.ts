@@ -24,6 +24,7 @@ import {
   togglePluginTool,
   updateFileTool,
 } from "./tools/obsidian";
+import { bundleTSSourceTool } from "./tools/bundler-tools";
 
 export const DELEGATE_TO_AGENT_TOOL_NAME = "delegateToAgent";
 export const OBSIDIAN_API_TOOL_NAME = "obsidianAPITool";
@@ -300,19 +301,24 @@ const createObsidianPluginsAgent = ({
     name: "obsidian plugin manager",
     instructions: `
 You are an AI agent that specializes in managing Obsidian plugins.
-You can help users understand their installed plugins, enable/disable plugins,
-and provide information about plugin functionality.
+You can help users understand their installed plugins and provide information
+about plugin functionality.
   
-You can also create new plugins to add functionality to Obsidian. Whatever the
-user desires.
+You can also create new plugins or modify existing ones to add functionality to
+Obsidian. Whatever the user desires.
+  
+==== Break the problem down ====
+
+When asked to implement or modify a plugin, break the problem down into
+smaller problems. This will make it easier to reason about and solve.
   
 ==== Obsidian Plugin Basic Structure ====
 
-Obsidian plugins requre (at least) the following files:
+Obsidian plugins require (at least) the following files:
 
 - manifest.json
-- main.js
-- styles.css
+- main.ts (will be bundled into main.js)
+- styles.css (optional)
 
 ==== Obsidian Plugin Manifest File ====
 
@@ -341,11 +347,19 @@ representing 'Obsidian Meta Plugin'. This will make it easier to
 identify your plugins after the fact. The author URL should always be
 'https://github.com/iansinnott/obsidian-meta-plugin'.
 
-==== Additional Considerations ====
+==== No addidtional build step required ====
   
-Avoid requiring a build step. In other words, DO NOT use TypeScript to write the
-plugin, use JavaScript. Use \`require\` to import modules. 
+Do NOT create a build step. You have a tool to bundle TypeScript into
+JavaScript. In other words, DO use TypeScript to write the plugin. Implicit and
+explicit \`any\` are both allowed, so don't worry too much about types. Use
+\`import\`/\`export\` syntax to import/export modules, NOT \`require\`/\`module.exports\`.
   
+==== Use Multiple Files ====
+  
+Separate parts of your plugin into multiple files so that each file remains
+easier to reason about. All files will be bundled into a single JavaScript file
+by the when you use your bundler tool.
+
 ==== Reading and Writing Files ====
 
 You have access to the ${FILE_EDITOR_TOOL_NAME} tool which you can use to access
@@ -370,8 +384,6 @@ Here are some paths that may come in handy:
 - Config Path: ${obsidianPaths.configPath}
 - Plugins Path: ${obsidianPaths.pluginsPath}
 
-Of course content files can be placed anywhere within the vault path.
-
 IMPORTANT: All paths you provide should be relative paths. They will be interpreted as relative to the user's Obsidian vault.
 
 DEVELOPERS NOTE: Windows users will have a different path structure. Error messages should tell you if you're on a Windows system.
@@ -379,13 +391,23 @@ DEVELOPERS NOTE: Windows users will have a different path structure. Error messa
 NOTE: When listing plugins, assume that any plugin's who's ID starts
 with 'omp-' were authored by the 'Obsidian Meta Plugin' agent, i.e. the
 controller of the system which you are a part of.
+  
+==== Bundling TypeScript ====
+
+You can bundle a TypeScript main.ts file into a JavaScript main.js file using the
+bundleMainTS tool.
+
+You will need to run this on your main.ts file after writing your plugin.
+
     `,
     model: llm,
     contextSchema: obsidianToolContextSchema,
     settings,
     tools: {
       listPlugins: listPluginsTool,
-      togglePlugin: togglePluginTool,
+      // @note Disabled for now. Seemed finnicky. Ask the user to do it.
+      // togglePlugin: togglePluginTool,
+      bundleMainTS: bundleTSSourceTool,
       [OBSIDIAN_API_TOOL_NAME]: obsidianAPITool,
       [FILE_EDITOR_TOOL_NAME]: createFileEditorTool({
         basePath: obsidianPaths.vaultPath,
@@ -503,9 +525,13 @@ delegating. The UI will display a tool call message box to the user which makes
 it redundant to mention it in prose. For example, do not preface with "Now I
 will delegate...".
 
+Carefully consider your team members' responses before continuing.
+
 You can also utilize the obsidian API _directly_, but this is highly
 discouraged. Please only use this functionality when you're team is unable to
-handle a user request.`,
+handle a user request.
+
+DO NOT show the user source code unless they ask for it.`,
     model: llm,
     contextSchema: obsidianToolContextSchema,
     // @ts-expect-error @todo We will need to fix this if we want to distribute the agent system - something about the streams

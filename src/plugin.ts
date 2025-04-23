@@ -1,14 +1,15 @@
-import { Plugin, normalizePath } from "obsidian";
+import { Plugin, normalizePath, Notice } from "obsidian";
 import { createAnthropic, type AnthropicProvider } from "@ai-sdk/anthropic";
 import type { LanguageModelV1 } from "ai";
 import { createOpenAI, type OpenAIProvider } from "@ai-sdk/openai";
 import { createTeamManagerAgent } from "./llm/agents";
-import { SampleModal } from "./modal";
 import { DEFAULT_SETTINGS, MetaSettingTab } from "./settings";
 import { META_SIDEBAR_VIEW_TYPE, MetaSidebarView, activateSidebarView } from "./sidebar";
 import { transformAnthropicRequest } from "./llm/utils/transformAnthropicRequest";
 import { ChunkProcessor } from "./llm/chunk-processor";
 import { registerPluginInstance } from "./hooks/state";
+import type { VaultAdapter, BundlerOptions, BundleResult, WASMBundler } from "./bundler/bundler";
+import { createAdvancedPlugin, createSamplePlugin } from "./bundler/bundler-runtime-test";
 
 export class MetaPlugin extends Plugin {
   settings: typeof DEFAULT_SETTINGS;
@@ -25,6 +26,8 @@ export class MetaPlugin extends Plugin {
   private subscribersMap: Map<string, Set<() => void>> = new Map();
   // Current conversation identifier
   private currentConversationId: string = "";
+  // bundler instance for plugin bundling
+  private bundler: WASMBundler | undefined;
 
   async ensureDataDir(subDir = "") {
     const path = require("path");
@@ -245,6 +248,32 @@ export class MetaPlugin extends Plugin {
     }
   }
 
+  /**
+   * Initialize bundler
+   */
+  async initializeEsbuild() {
+    if (!this.bundler) {
+      const { createBundler } = await import("./bundler/bundler");
+      this.bundler = createBundler(
+        this.app.vault.adapter as unknown as VaultAdapter,
+        normalizePath,
+        this
+      );
+    }
+    await this.bundler!.initialize();
+  }
+
+  /**
+   * Bundle a plugin project from source files
+   */
+  public async bundlePlugin(
+    entryPointPath: string,
+    options: BundlerOptions = { sourcemap: false }
+  ): Promise<BundleResult> {
+    await this.initializeEsbuild();
+    return this.bundler!.bundle(entryPointPath, options);
+  }
+
   async onload() {
     // Register the plugin instance for state delegation
     registerPluginInstance(this);
@@ -268,15 +297,6 @@ export class MetaPlugin extends Plugin {
       activateSidebarView(this);
     });
 
-    // This adds a simple command that can be triggered anywhere
-    this.addCommand({
-      id: "open-sample-modal-simple",
-      name: "Open sample modal (simple)",
-      callback: () => {
-        new SampleModal(this.app, this).open();
-      },
-    });
-
     // Add command to open the sidebar view
     this.addCommand({
       id: "open-meta-sidebar",
@@ -286,11 +306,55 @@ export class MetaPlugin extends Plugin {
       },
     });
 
+    // Add a command to test the bundler functionality
+    this.addCommand({
+      id: "test-bundler-sample-plugin",
+      name: "Test Bundler: Create Sample Plugin",
+      callback: async () => {
+        try {
+          const result = await createSamplePlugin(this, normalizePath);
+          if (result.success) {
+            new Notice(`Sample Plugin bundled successfully at: ${result.outputPath}`, 5000);
+          } else {
+            new Notice(`Sample Plugin bundling failed: ${result.error}`, 5000);
+          }
+        } catch (error) {
+          console.error("Error testing bundler (Sample Plugin):", error);
+          new Notice("Error testing bundler (Sample Plugin). Check console for details.", 5000);
+        }
+      },
+    });
+
+    // Add a command to test the bundler with the advanced plugin
+    this.addCommand({
+      id: "test-bundler-advanced-plugin",
+      name: "Test Bundler: Create Advanced Plugin",
+      callback: async () => {
+        try {
+          const result = await createAdvancedPlugin(this, normalizePath);
+          if (result.success) {
+            new Notice(`Advanced Plugin bundled successfully at: ${result.outputPath}`, 5000);
+          } else {
+            new Notice(`Advanced Plugin bundling failed: ${result.error}`, 5000);
+          }
+        } catch (error) {
+          console.error("Error testing bundler (Advanced Plugin):", error);
+          new Notice("Error testing bundler (Advanced Plugin). Check console for details.", 5000);
+        }
+      },
+    });
+
     const settingsTab = new MetaSettingTab(this.app, this);
     this.addSettingTab(settingsTab);
   }
 
   onunload() {
+    // Shutdown bundler if it was initialized
+    if (this.bundler) {
+      this.bundler.stop();
+      this.bundler = undefined;
+    }
+
     // Detach any leaves with our view type
     this.app.workspace.detachLeavesOfType(META_SIDEBAR_VIEW_TYPE);
   }

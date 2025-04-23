@@ -11,6 +11,7 @@
         "@ai-sdk/openai": "^1.3.16",
         "ai": "^4.3.9",
         "classnames": "^2.5.1",
+        "esbuild-wasm": "0.25.2",
         "framer-motion": "^12.7.3",
         "immer": "^10.1.1",
         "react": "^19.1.0",
@@ -321,6 +322,8 @@
     "emoji-regex": ["emoji-regex@9.2.2", "", {}, "sha512-L18DaJsXSUk2+42pv8mLs5jJT2hqFkFE4j21wOmgbUqsZ2hL72NsUU785g9RXgo3s0ZNgVl42TiHp3ZtOv/Vyg=="],
 
     "esbuild": ["esbuild@0.17.3", "", { "optionalDependencies": { "@esbuild/android-arm": "0.17.3", "@esbuild/android-arm64": "0.17.3", "@esbuild/android-x64": "0.17.3", "@esbuild/darwin-arm64": "0.17.3", "@esbuild/darwin-x64": "0.17.3", "@esbuild/freebsd-arm64": "0.17.3", "@esbuild/freebsd-x64": "0.17.3", "@esbuild/linux-arm": "0.17.3", "@esbuild/linux-arm64": "0.17.3", "@esbuild/linux-ia32": "0.17.3", "@esbuild/linux-loong64": "0.17.3", "@esbuild/linux-mips64el": "0.17.3", "@esbuild/linux-ppc64": "0.17.3", "@esbuild/linux-riscv64": "0.17.3", "@esbuild/linux-s390x": "0.17.3", "@esbuild/linux-x64": "0.17.3", "@esbuild/netbsd-x64": "0.17.3", "@esbuild/openbsd-x64": "0.17.3", "@esbuild/sunos-x64": "0.17.3", "@esbuild/win32-arm64": "0.17.3", "@esbuild/win32-ia32": "0.17.3", "@esbuild/win32-x64": "0.17.3" }, "bin": { "esbuild": "bin/esbuild" } }, "sha512-9n3AsBRe6sIyOc6kmoXg2ypCLgf3eZSraWFRpnkto+svt8cZNuKTkb1bhQcitBcvIqjNiK7K0J3KPmwGSfkA8g=="],
+
+    "esbuild-wasm": ["esbuild-wasm@0.25.2", "", { "bin": { "esbuild": "bin/esbuild" } }, "sha512-vL9PSK1YFGsvrlYPDxfRxpakIDTe1wCS/JO2D45muxwtd7GR/9+fYRU+K8tKs4ZDXaEy5jr6YqrGgDL/iyufyQ=="],
 
     "escalade": ["escalade@3.2.0", "", {}, "sha512-WUj2qlxaQtO4g6Pq5c29GTcWGDyd8itL8zTlipgECz3JesAiiOKotd8JU6otB3PACgG6xkJUyVhboMS+bje/jA=="],
 

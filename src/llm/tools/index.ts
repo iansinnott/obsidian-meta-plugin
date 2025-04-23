@@ -45,6 +45,7 @@ export const createDirectReportDelegationTool = <TContext>(
 
         // If we're passed a chunk processor use it to append all the chunks.
         for await (const chunk of subAgentStream.fullStream) {
+          // @todo - Hrm, do we need to do this? One would expect the stream to be aborted from the streamText call.
           // Check for abort signal during streaming
           if (options.abortSignal?.aborted) {
             throw new Error("Delegation aborted by signal.");
