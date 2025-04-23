@@ -1,6 +1,18 @@
-# Obsidian Meta Plugin
+<p align="center">
+  <img src="assets/omp-transparent-512px.png" alt="Obsidian Meta Plugin Logo" width="256"/>
+</p>
+
+<p align="center">
+  A plugin that can write other plugins.
+</p>
+
+<h1 align="center">
+  Obsidian Meta Plugin
+</h1>
 
 A plugin for [Obsidian](https://obsidian.md) that can modify Obsidian itself. It can create or modify plugins, themes, and settings, acting as your personal Obsidian developer.
+
+Now you can vibe code your own Obsidian plugins without coding at all! Just describe what you want and OMP _might_ make it happen.
 
 ## Features
 
