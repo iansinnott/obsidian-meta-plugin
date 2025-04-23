@@ -112,7 +112,6 @@ export class MetaSettingTab extends PluginSettingTab {
       dropdown.setValue(this.plugin.settings.model).onChange(async (value) => {
         this.plugin.settings.model = value;
         await this.plugin.saveSettings();
-        console.log("Selected model:", value);
       });
     });
 
