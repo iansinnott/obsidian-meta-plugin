@@ -19,6 +19,7 @@ try {
     "versions.json",
     "README.md",
     "LICENSE",
+    "esbuild-0.25.2.wasm",
   ];
 
   // Create releases directory if it doesn't exist
