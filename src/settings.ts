@@ -2,10 +2,10 @@ import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import type { MetaPlugin as IMetaPlugin } from "./plugin";
 
 export const DEFAULT_SETTINGS = {
-  apiKey: "",
-  baseUrl: "https://api.openai.com",
-  model: "",
-  availableModels: [] as string[],
+  apiKey: crypto.randomUUID() as string, // Just a placeholder value...
+  baseUrl: "https://cf-llm-oprah-bff.txn.workers.dev/anthropic/v1",
+  model: "claude-3-7-sonnet-20250219",
+  availableModels: ["claude-3-7-sonnet-20250219"] as string[],
   maxSteps: 20,
   maxRetries: 2,
   maxTokens: 8000,
@@ -24,9 +24,17 @@ export class MetaSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
+    containerEl.createEl("h3", { text: "LLM Connection Settings" });
+    let el;
+    el = containerEl.createEl("p");
+    el.innerHTML = `This plugin comes pre-configured with <strong>${DEFAULT_SETTINGS.model}</strong>, but you can configure your own here.`;
+    el = containerEl.createEl("p");
+    el.innerHTML =
+      "Be sure to use <i>intelligent</i> models. Lesser models generally will <strong><i>not</i></strong> work.";
+
     new Setting(containerEl)
       .setName("API Key")
-      .setDesc("Enter your OpenAI API key here")
+      .setDesc("Enter your API key here")
       .addText((text) => {
         text
           .setPlaceholder("Enter your API key")
@@ -55,13 +63,26 @@ export class MetaSettingTab extends PluginSettingTab {
       );
 
     // Add a separate section for preset API endpoint buttons
-    const presetButtonSetting = new Setting(containerEl).setDesc("Select a preset API endpoint");
+    const presetButtonSetting = new Setting(containerEl);
     presetButtonSetting.settingEl.style.borderTop = "none";
+
+    // Add OpenAI button
+    presetButtonSetting.addButton((button) => {
+      return button.setButtonText("Default").onClick(async () => {
+        this.plugin.settings.baseUrl = DEFAULT_SETTINGS.baseUrl;
+        this.plugin.settings.model = DEFAULT_SETTINGS.model;
+        this.plugin.settings.availableModels = DEFAULT_SETTINGS.availableModels;
+        this.plugin.settings.apiKey = DEFAULT_SETTINGS.apiKey;
+        await this.plugin.saveSettings();
+        this.display(); // Refresh the display to update the text field
+      });
+    });
 
     // Add OpenAI button
     presetButtonSetting.addButton((button) => {
       return button.setButtonText("OpenAI").onClick(async () => {
         this.plugin.settings.baseUrl = "https://api.openai.com/v1";
+        this.plugin.settings.apiKey = "";
         await this.plugin.saveSettings();
         this.display(); // Refresh the display to update the text field
       });
@@ -71,6 +92,7 @@ export class MetaSettingTab extends PluginSettingTab {
     presetButtonSetting.addButton((button) => {
       return button.setButtonText("OpenRouter").onClick(async () => {
         this.plugin.settings.baseUrl = "https://openrouter.ai/api/v1";
+        this.plugin.settings.apiKey = "";
         await this.plugin.saveSettings();
         this.display(); // Refresh the display to update the text field
       });
@@ -80,6 +102,7 @@ export class MetaSettingTab extends PluginSettingTab {
     presetButtonSetting.addButton((button) => {
       return button.setButtonText("Ollama").onClick(async () => {
         this.plugin.settings.baseUrl = "http://localhost:11434/v1";
+        this.plugin.settings.apiKey = "";
         await this.plugin.saveSettings();
         this.display(); // Refresh the display to update the text field
       });
@@ -88,15 +111,14 @@ export class MetaSettingTab extends PluginSettingTab {
     presetButtonSetting.addButton((button) => {
       return button.setButtonText("Claude").onClick(async () => {
         this.plugin.settings.baseUrl = "https://api.anthropic.com/v1";
+        this.plugin.settings.apiKey = "";
         await this.plugin.saveSettings();
         this.display(); // Refresh the display to update the text field
       });
     });
 
-    // Add Model Selection Dropdown and Refresh Button
     new Setting(containerEl).setName("Model").setDesc("Select the model to use for generation.");
 
-    // Add Model Selection Dropdown and Refresh Button
     const modelSetting = new Setting(containerEl);
 
     modelSetting.infoEl.style.display = "none";
@@ -116,23 +138,25 @@ export class MetaSettingTab extends PluginSettingTab {
     });
 
     // Refresh button for models
-    modelSetting.addButton((button) => {
-      button
-        .setButtonText("Refresh")
-        .setCta() // Makes it stand out slightly
-        .setTooltip("Fetch the latest available models from the API")
-        .onClick(async () => {
-          button.setDisabled(true).setButtonText("Refreshing..."); // Disable button during refresh
-          try {
-            await this.plugin.refreshModelList();
-            this.display(); // Refresh the settings display to update the dropdown
-          } catch (error) {
-            console.error("Error refreshing model list:", error);
-            new Notice("Failed to refresh model list. Check console.");
-            button.setDisabled(false).setButtonText("Refresh");
-          }
-        });
-    });
+    if (this.plugin.settings.baseUrl !== DEFAULT_SETTINGS.baseUrl) {
+      modelSetting.addButton((button) => {
+        button
+          .setButtonText("Refresh")
+          .setCta() // Makes it stand out slightly
+          .setTooltip("Fetch the latest available models from the API")
+          .onClick(async () => {
+            button.setDisabled(true).setButtonText("Refreshing..."); // Disable button during refresh
+            try {
+              await this.plugin.refreshModelList();
+              this.display(); // Refresh the settings display to update the dropdown
+            } catch (error) {
+              console.error("Error refreshing model list:", error);
+              new Notice("Failed to refresh model list. Check console.");
+              button.setDisabled(false).setButtonText("Refresh");
+            }
+          });
+      });
+    }
 
     // Add advanced LLM settings
     containerEl.createEl("h3", { text: "Advanced LLM Settings" });
