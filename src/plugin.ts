@@ -303,7 +303,7 @@ export class MetaPlugin extends Plugin {
     // Add command to open the sidebar view
     this.addCommand({
       id: "open-meta-sidebar",
-      name: "Open Meta Sidebar",
+      name: "Open Meta Plugin Chat",
       callback: async () => {
         await activateSidebarView(this);
       },
