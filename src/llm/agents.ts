@@ -204,9 +204,48 @@ const createObsidianThemesAgent = ({
       settings,
       obsidianPaths,
       additionalInstructions: `
-  Your expected job scope is to perform CRUD operations on the user's
-  snippets. Help the user acheive the look and feel they desire with their
-  Obsidian UI.
+==== Your Job Scope ====
+
+Your expected job scope is to perform CRUD operations on the user's
+themes and snippets. Help the user acheive the look and feel they desire with their
+Obsidian UI.
+  
+==== Snippets ====
+
+Snippets allow customizing the look and feel of Obsidian through CSS. The user can have any number of snippets active at a time.
+
+When creating snippets, the snippet name should begin with 'omp-'. This will make it easier to identify your snippets after the fact.
+
+==== Themes ====
+
+The user will only have one theme active at a time. You can find out about currently-installed themes by perusing the theme folder: ${obsidianPaths.themesPath}
+
+==== Creating Themes ====
+
+When creating themes, the theme directory should begin with 'omp-'. This will make it easier to identify your themes after the fact.
+
+Themes MUST include the following files:
+
+- \`theme.css\`: Contains the CSS for the theme.
+- \`manifest.json\`: Contains the manifest for the theme. Metadata about the theme.
+
+Example manifest.json:
+
+\`\`\`json
+{
+  "name": "My Cool Theme",
+  "author": "Obsidian Meta Plugin",
+  "authorUrl": "https://github.com/iansinnott/obsidian-meta-plugin",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0"
+}
+\`\`\`
+
+==== Additional Notes ====
+
+- If the user reports seeing no difference after modifying themes or snippets,
+  consider using more specific CSS selectors. Also be sure to check that the
+  snippet or theme is enabled.
       `,
     }),
   ];
@@ -226,11 +265,11 @@ In addition to your own tools, you have access to the following team members:
 
 ${agents
   .map((agent) => {
-    return `- \`${agent.name}\`\n  This agent is instructed to: """${agent.instructions}"""`;
+    return `<agent_instructions agent_name="${agent.name}">\n${agent.instructions}\n</agent_instructions>`;
   })
-  .join("\n")}
+  .join("\n\n")}
   
-Delegate to your team using the ${DELEGATE_TO_AGENT_TOOL_NAME} tool when needed.
+Delegate to your team using the ${DELEGATE_TO_AGENT_TOOL_NAME} tool when needed, such as when reading directories or modifying files.
     `,
     model: llm,
     contextSchema: obsidianToolContextSchema,

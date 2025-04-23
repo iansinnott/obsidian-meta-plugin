@@ -10,12 +10,31 @@ import { normalizePath } from "obsidian";
 // for handing AI's other than anthropic
 export const fileEditorToolSchema = z.object({
   command: z.enum(["view", "str_replace", "create", "insert", "undo_edit"]),
-  path: z.string().optional(),
-  view_range: z.array(z.number()).optional(),
-  old_str: z.string().optional(),
-  new_str: z.string().optional(),
-  file_text: z.string().optional(),
-  insert_line: z.number().optional(),
+  path: z
+    .string()
+    .describe(
+      "The file OR directory path to operate on. For 'view' operations if a directory is provided, the directory listing of the directory will be returned."
+    )
+    .optional(),
+  view_range: z
+    .array(z.number())
+    .describe(
+      "The start and end line numbers to view. The first line is 1. If only the start line is provided, the end line will be the length of the file."
+    )
+    .optional(),
+  old_str: z
+    .string()
+    .describe("The string to replace. If not provided, the first match will be replaced.")
+    .optional(),
+  new_str: z.string().describe("The string to replace the old_str with.").optional(),
+  file_text: z
+    .string()
+    .describe("The text to create a file with. Only used for 'create' operations.")
+    .optional(),
+  insert_line: z
+    .number()
+    .describe("The line number to insert the text at. The first line is 1.")
+    .optional(),
 });
 
 type FileEditorToolParams = z.infer<typeof fileEditorToolSchema>;
