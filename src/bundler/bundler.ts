@@ -46,7 +46,6 @@ export function createBundler(
   plugin: MetaPlugin
 ) {
   let esbuildInitialized = false;
-  console.log("plugin", plugin);
   const pluginPath = path.join(plugin.app.plugins!.getPluginFolder(), plugin.manifest.id);
 
   /** Initialize esbuild-wasm with local caching or CDN fallback. */
@@ -62,23 +61,22 @@ export function createBundler(
         const wasmURL = adapter.getResourcePath(wasmPath);
         await esbuild.initialize({ wasmURL, worker: false });
         esbuildInitialized = true;
-        console.log("esbuild initialized with local WASM file", wasmURL);
+        console.debug("[bundler] esbuild initialized with local WASM file", wasmURL);
       } catch (localError) {
         console.warn(
-          "Failed to initialize esbuild with local WASM file, falling back to CDN:",
+          "[bundler] Failed to initialize esbuild with local WASM file, falling back to CDN:",
           localError
         );
 
+        const remoteUrl = "https://unpkg.com/esbuild-wasm@0.25.2/esbuild.wasm";
+
         // Fallback to CDN
-        await esbuild.initialize({
-          wasmURL: "https://unpkg.com/esbuild-wasm@0.25.2/esbuild.wasm",
-          worker: false,
-        });
+        await esbuild.initialize({ wasmURL: remoteUrl, worker: false });
         esbuildInitialized = true;
-        console.log("esbuild initialized with CDN WASM file");
+        console.debug("[bundler] esbuild initialized with CDN WASM file: ");
       }
     } catch (error) {
-      console.error("Failed to initialize esbuild:", error);
+      console.error("[bundler] Failed to initialize esbuild:", error);
       throw error;
     }
   }
@@ -106,7 +104,7 @@ export function createBundler(
         absoluteEntryPath = path.join(vaultBasePath, entryPointPath);
       }
 
-      console.log(`[bundler] Absolute entry path: ${absoluteEntryPath}`);
+      console.debug(`[bundler] Absolute entry path: ${absoluteEntryPath}`);
 
       // Ensure entry point exists
       if (!(await adapter.exists(entryPointPath))) {
@@ -120,7 +118,7 @@ export function createBundler(
         throw new Error("manifest.json not found in plugin directory");
       }
 
-      console.log(`[bundler] Starting bundling for entry point: ${entryPointPath}`);
+      console.debug(`[bundler] Starting bundling for entry point: ${entryPointPath}`);
 
       // Create a filesystem plugin for esbuild
       const obsidianFsPlugin: esbuild.Plugin = {
@@ -131,7 +129,7 @@ export function createBundler(
 
           // Resolve imports
           build.onResolve({ filter: /.*/ }, (args) => {
-            console.log(`[esbuild] Resolving: ${args.path} from ${args.importer}`);
+            console.debug(`[esbuild] Resolving: ${args.path} from ${args.importer}`);
 
             if (!args.path.startsWith(".") && !path.isAbsolute(args.path)) {
               return { path: args.path, external: true };
@@ -156,7 +154,7 @@ export function createBundler(
             { filter: /.*/, namespace: "obsidian-fs" },
             async (args: esbuild.OnLoadArgs) => {
               try {
-                console.log(`[esbuild] Loading: ${args.path}`);
+                console.debug(`[esbuild] Loading: ${args.path}`);
                 const vaultRelativePath = args.path.startsWith(vaultBasePath)
                   ? args.path.slice(vaultBasePath.length + 1)
                   : args.path;
