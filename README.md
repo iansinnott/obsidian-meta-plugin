@@ -78,6 +78,57 @@ bun run build
 bun run version
 ```
 
+## Points of interst
+
+Todo... Anthropic file editor use,
+
+## Security
+
+(... awkward silence)
+
+Obsidian plugins are, in general, a security nightmare. This is not specific to OMP, but general to all plugins. From the [official documentation](https://help.obsidian.md/plugin-security#Plugin+capabilities), any Obsidian plugin can:
+
+- Access files on your computer.
+- Connect to internet.
+- Install additional programs.
+
+So, you should be skeptical of **_any plugin_** you install.
+
+With that said, let's talk about the excitement OMP brings to the picture. OMP gives an AI access to all these superpowers. This is how the AI is able to modify Obsidian on your behalf, however, it means that AI responses can have **real-world impact** on your computer.
+
+### Hallucinations
+
+Large Language Models (LLMs) like the one powering OMP can sometimes "hallucinate" – generating responses that are incorrect, nonsensical, or entirely fabricated, despite sounding confident.
+
+In the context of OMP, a hallucination could manifest as:
+
+- Misinterpreting your request and performing the wrong action (e.g., editing the wrong file).
+- Generating incorrect or non-functional code when asked to create or modify a plugin.
+  - NOTE: When code simply throws an error it's likely not an issue. Obsidian is fairly robust against plugin errors. Incorrect code that actually runs is what to look out for.
+- Attempting to use tools with incorrect arguments, potentially leading to errors or unwanted side effects.
+- Making up file paths or plugin names.
+
+Because OMP agents can directly modify your filesystem and Obsidian configuration, the consequences of a hallucination could range from minor annoyance to data loss or a broken Obsidian setup.
+
+**Mitigation:** Use the best model you can! During development testing I mostly used Sonnet 3.7, which I found to be very capable.
+
+### Prompt Injection
+
+Prompt injection is an attack where malicious text is crafted to manipulate the LLM's behavior, potentially overriding its original instructions or causing it to perform unintended actions.
+
+OMP agents have access to your notes, which means _your notes_ should be considered part of the prompt. If you put "Ignore all previous instructions..." in one of your notes, its entirely possible that text gets into a prompt.
+
+If you use Obsidian web clipper consider that clipped content, which you didn't write, can be used to prompt the LLM.
+
+There's a risk that specially crafted text within a note, or a malicious prompt you are tricked into providing, could exploit this. For example, an attacker could try to:
+
+- Embed instructions in a note file telling the AI to delete other files or modify sensitive settings when that note is processed.
+- Craft a prompt that tricks the AI into revealing sensitive information from other notes or system configuration.
+- Instruct the AI to generate a seemingly harmless plugin that actually contains malicious code.
+- Cause the AI agent to misuse its tools to exfiltrate data or execute harmful commands (especially if tools with network or shell access were ever added).
+
+**Mitigation:** Use a smart model. Other than that, if you have suggestions please open an issue or PR. Contributions welcome.
+
 ## Release Process
 
 To create a new release, simply run the automated release script:
@@ -100,6 +151,7 @@ This script will:
 - The plugin that builds other plugins
 - The last plugin you'll ever need
 - You're own personal Obsidian dev team
+- Cursor / Windsurf for Obsididan
 
 ## License
 
