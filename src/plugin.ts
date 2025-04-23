@@ -163,7 +163,10 @@ export class MetaPlugin extends Plugin {
   handleApiSettingsUpdate() {
     // If we're using Anthropic, we need a different way to fetch models since
     // ai sdk doesn't provide that. Otherwise, everything should be the same.
-    const isAnthropic = () => this.settings.baseUrl.includes("api.anthropic.com");
+    const baseUrl = this.settings.baseUrl;
+
+    // @todo Not the most robust check...
+    const isAnthropic = () => baseUrl.includes("anthropic");
 
     this.api = {
       models: {

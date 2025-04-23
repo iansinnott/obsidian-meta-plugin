@@ -56,9 +56,6 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
       try {
         if (plugin.agent) {
           const messages = getMessages();
-
-          console.log("%c[handleSubmit] messages", "color: lime;", messages);
-
           const stream = plugin.agent.streamText(
             {
               // @ts-expect-error - some deeply nested thing
