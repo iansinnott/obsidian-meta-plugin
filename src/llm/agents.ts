@@ -534,6 +534,7 @@ handle a user request.
 DO NOT show the user source code unless they ask for it.`,
     model: llm,
     contextSchema: obsidianToolContextSchema,
+    settings,
     // @ts-expect-error @todo We will need to fix this if we want to distribute the agent system - something about the streams
     agents,
     tools: {
