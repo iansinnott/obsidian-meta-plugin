@@ -16,7 +16,7 @@ Now you can vibe code your own Obsidian plugins without coding at all! Just desc
 
 ## Demo
 
-https://github.com/iansinnott/obsidian-meta-plugin/releases/download/v1.3.1/OMP.-.auto.tagger.plugin.mp4
+https://zenture-hosted.s3.amazonaws.com/omp/OMP%20-%20auto%20tagger%20plugin.mp4
 
 ## Features
 
