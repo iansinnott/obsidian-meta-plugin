@@ -30,10 +30,7 @@ https://github.com/user-attachments/assets/da8ca679-4d37-4e27-875c-4210888341a9
 
 ### From Obsidian Community Plugins
 
-1. Open Obsidian Settings > Community Plugins
-2. Disable Safe Mode
-3. Search for "Meta Plugin"
-4. Install and enable the plugin
+It's not yet in community plugins. Until it's approved use the manual installation.
 
 ### Manual Installation
 
