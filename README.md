@@ -14,6 +14,10 @@ A plugin for [Obsidian](https://obsidian.md) that can modify Obsidian itself. It
 
 Now you can vibe code your own Obsidian plugins without coding at all! Just describe what you want and OMP _might_ make it happen.
 
+## Demo
+
+![Demo Video](https://zenture-hosted.s3.amazonaws.com/omp/OMP%20-%20auto%20tagger%20plugin.mp4)
+
 ## Features
 
 - **LLM-Powered Assistance**: Integrates with various language models (Claude, GPT, Llama) to help you customize Obsidian
