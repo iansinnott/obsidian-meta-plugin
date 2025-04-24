@@ -34,7 +34,7 @@ It's not yet in community plugins. Until it's approved use the manual installati
 
 ### Manual Installation
 
-1. Download the latest release from the [Releases page](https://github.com/your-username/obsidian-meta-plugin/releases)
+1. Download the latest release from the [Releases page](https://github.com/iansinnott/obsidian-meta-plugin/releases)
 2. Extract the zip archive into your vault's plugins folder: `<vault>/.obsidian/plugins/`
 3. Enable the plugin in Obsidian's Community Plugins settings
 
@@ -56,7 +56,7 @@ It's not yet in community plugins. Until it's approved use the manual installati
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/obsidian-meta-plugin.git
+git clone https://github.com/iansinnott/obsidian-meta-plugin.git
 
 # Navigate to the plugin directory
 cd obsidian-meta-plugin
