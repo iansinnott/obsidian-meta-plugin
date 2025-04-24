@@ -2,6 +2,7 @@ import { Plugin, normalizePath, Notice } from "obsidian";
 import { createAnthropic, type AnthropicProvider } from "@ai-sdk/anthropic";
 import type { LanguageModelV1 } from "ai";
 import { createOpenAI, type OpenAIProvider } from "@ai-sdk/openai";
+import { generateText, streamText, type ToolSet } from "ai";
 import { createTeamManagerAgent } from "./llm/agents";
 import { DEFAULT_SETTINGS, MetaSettingTab } from "./settings";
 import { META_SIDEBAR_VIEW_TYPE, MetaSidebarView, activateSidebarView } from "./sidebar";
@@ -275,6 +276,40 @@ export class MetaPlugin extends Plugin {
   ): Promise<BundleResult> {
     await this.initializeEsbuild();
     return this.bundler!.bundle(entryPointPath, options);
+  }
+
+  /**
+   * Generate text using the configured language model
+   * This method allows other plugins created by meta plugin to use LLM functionality
+   */
+  public async generateText<TTools extends ToolSet = {}, TInput = unknown, TOutput = unknown>(
+    options: Omit<Parameters<typeof generateText<TTools, TInput, TOutput>>[0], "model">
+  ) {
+    if (!this.llm) {
+      throw new Error("Language model not initialized");
+    }
+
+    return generateText<TTools, TInput, TOutput>({
+      model: this.llm,
+      ...options,
+    });
+  }
+
+  /**
+   * Stream text using the configured language model
+   * This method allows other plugins created by meta plugin to use streaming LLM functionality
+   */
+  public streamText<TTools extends ToolSet = {}, TInput = unknown, TOutput = unknown>(
+    options: Omit<Parameters<typeof streamText<TTools, TInput, TOutput>>[0], "model">
+  ) {
+    if (!this.llm) {
+      throw new Error("Language model not initialized");
+    }
+
+    return streamText<TTools, TInput, TOutput>({
+      model: this.llm,
+      ...options,
+    });
   }
 
   async onload() {

@@ -438,6 +438,39 @@ bundleMainTS tool.
 
 You will need to run this on your main.ts file after writing your plugin.
 
+==== Using LLM / Large Language Models / Generative AI ====
+
+Plugins you create and manage can make of LLMs at runtime if needed.
+You can assume that the Obsidian Meta Plugin is installed and make use of it's
+\`generateText\` and \`streamText\` methods as needed. First, get a reference to
+the plugin by calling
+\`this.app.plugins.getPlugin('obsidian-meta-plugin')\`. Then, make use of
+the methods as needed.
+  
+Example:
+
+\`\`\`typescript
+const omp = this.app.plugins.getPlugin('obsidian-meta-plugin');
+const res = await omp.generateText({
+  prompt: "whats 2 + 2?",
+});
+console.log(res.text);
+
+// or, if you need to pass an array of messages.
+const res = await omp.generateText({
+  messages: [ { role: "user", content: "hey" } ],
+});
+console.log(res.text);
+
+// Or, if you need streaming (note, stream result is not a promise):
+const stream = omp.streamText({
+  messages: [ { role: "user", content: "whats 2 + 2?" } ],
+});
+for await (const chunk of stream.textStream) {
+  console.log(chunk.text);
+}
+
+\`\`\`
     `,
     model: llm,
     contextSchema: obsidianToolContextSchema,
