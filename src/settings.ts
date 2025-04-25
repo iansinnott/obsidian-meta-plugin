@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import type { MetaPlugin as IMetaPlugin } from "./plugin";
 
-export const LOCAL_STORAGE_API_KEY = "vibesidian-api-key";
+const LOCAL_STORAGE_API_KEY = "vibesidian-api-key";
 
 export const DEFAULT_SETTINGS = {
   apiKey: "",
@@ -46,6 +46,29 @@ export class MetaSettingTab extends PluginSettingTab {
 
   async display(): Promise<void> {
     const { containerEl } = this;
+
+    // Auto-fetch API key if using Default provider and no key exists - do this in background
+    if (this.plugin.settings.baseUrl === DEFAULT_SETTINGS.baseUrl) {
+      const existingApiKey = localStorage.getItem(LOCAL_STORAGE_API_KEY);
+      if (!existingApiKey) {
+        // Start fetch in background without awaiting
+        this.fetchNewApiKey()
+          .then((apiKey) => {
+            if (apiKey) {
+              localStorage.setItem(LOCAL_STORAGE_API_KEY, apiKey);
+              this.plugin.settings.apiKey = apiKey;
+              this.plugin.saveSettings().then(() => {
+                new Notice("API key initialized successfully");
+                // Refresh display to show the new key
+                this.display();
+              });
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching API key in background:", error);
+          });
+      }
+    }
 
     containerEl.empty();
 
@@ -186,23 +209,25 @@ export class MetaSettingTab extends PluginSettingTab {
     });
 
     // Refresh button for models
-    modelSetting.addButton((button) => {
-      button
-        .setButtonText("Refresh")
-        .setCta() // Makes it stand out slightly
-        .setTooltip("Fetch the latest available models from the API")
-        .onClick(async () => {
-          button.setDisabled(true).setButtonText("Refreshing..."); // Disable button during refresh
-          try {
-            await this.plugin.refreshModelList();
-            this.display(); // Refresh the settings display to update the dropdown
-          } catch (error) {
-            console.error("Error refreshing model list:", error);
-            new Notice("Failed to refresh model list. Check console.");
-            button.setDisabled(false).setButtonText("Refresh");
-          }
-        });
-    });
+    if (this.plugin.settings.baseUrl !== DEFAULT_SETTINGS.baseUrl) {
+      modelSetting.addButton((button) => {
+        button
+          .setButtonText("Refresh")
+          .setCta() // Makes it stand out slightly
+          .setTooltip("Fetch the latest available models from the API")
+          .onClick(async () => {
+            button.setDisabled(true).setButtonText("Refreshing..."); // Disable button during refresh
+            try {
+              await this.plugin.refreshModelList();
+              this.display(); // Refresh the settings display to update the dropdown
+            } catch (error) {
+              console.error("Error refreshing model list:", error);
+              new Notice("Failed to refresh model list. Check console.");
+              button.setDisabled(false).setButtonText("Refresh");
+            }
+          });
+      });
+    }
 
     // Add advanced LLM settings
     containerEl.createEl("h3", { text: "Advanced LLM Settings" });

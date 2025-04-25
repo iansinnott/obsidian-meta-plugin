@@ -4,7 +4,7 @@ import type { LanguageModelV1 } from "ai";
 import { createOpenAI, type OpenAIProvider } from "@ai-sdk/openai";
 import { generateText, streamText, type ToolSet } from "ai";
 import { createTeamManagerAgent } from "./llm/agents";
-import { DEFAULT_SETTINGS, LOCAL_STORAGE_API_KEY, MetaSettingTab } from "./settings";
+import { DEFAULT_SETTINGS, MetaSettingTab } from "./settings";
 import { META_SIDEBAR_VIEW_TYPE, MetaSidebarView, activateSidebarView } from "./sidebar";
 import { transformAnthropicRequest } from "./llm/utils/transformAnthropicRequest";
 import { ChunkProcessor } from "./llm/chunk-processor";
@@ -166,6 +166,7 @@ export class MetaPlugin extends Plugin {
     // ai sdk doesn't provide that. Otherwise, everything should be the same.
     const baseUrl = this.settings.baseUrl;
     const defaultBaseUrl = DEFAULT_SETTINGS.baseUrl;
+    const LOCAL_STORAGE_API_KEY = "vibesidian-api-key";
 
     // Check if we're using the Default provider but don't have an API key yet
     if (baseUrl === defaultBaseUrl && !this.settings.apiKey) {
@@ -358,6 +359,7 @@ export class MetaPlugin extends Plugin {
 
     // Ensure we have an API key if using the Default provider - do this in background
     if (this.settings.baseUrl === DEFAULT_SETTINGS.baseUrl && !this.settings.apiKey) {
+      const LOCAL_STORAGE_API_KEY = "vibesidian-api-key";
       let apiKey = localStorage.getItem(LOCAL_STORAGE_API_KEY);
 
       if (!apiKey) {
