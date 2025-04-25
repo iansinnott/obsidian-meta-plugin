@@ -1,11 +1,13 @@
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import type { MetaPlugin as IMetaPlugin } from "./plugin";
 
+export const LOCAL_STORAGE_API_KEY = "vibesidian-api-key";
+
 export const DEFAULT_SETTINGS = {
-  apiKey: crypto.randomUUID() as string, // Just a placeholder value...
-  baseUrl: "https://cf-llm-oprah-bff.txn.workers.dev/anthropic/v1",
+  apiKey: "",
+  baseUrl: "https://llm-oprah.zenture.cloud/v1",
   model: "claude-3-7-sonnet-20250219",
-  availableModels: ["claude-3-7-sonnet-20250219"] as string[],
+  availableModels: [] as string[],
   maxSteps: 20,
   maxRetries: 2,
   maxTokens: 8000,
@@ -19,7 +21,30 @@ export class MetaSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
-  display(): void {
+  // Fetch a new API key from the CloudFlare Workers endpoint
+  async fetchNewApiKey(): Promise<string> {
+    try {
+      const response = await fetch("https://cf-llm-oprah-bff.txn.workers.dev/key/generate", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch API key: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.key;
+    } catch (error) {
+      console.error("Error fetching new API key:", error);
+      new Notice("Failed to fetch API key. Check console for details.");
+      return "";
+    }
+  }
+
+  async display(): Promise<void> {
     const { containerEl } = this;
 
     containerEl.empty();
@@ -27,10 +52,22 @@ export class MetaSettingTab extends PluginSettingTab {
     containerEl.createEl("h3", { text: "LLM Connection Settings" });
     let el;
     el = containerEl.createEl("p");
-    el.innerHTML = `This plugin comes pre-configured with <strong>${DEFAULT_SETTINGS.model}</strong>, but you can configure your own here.`;
+    el.innerHTML = `This plugin comes <strong>pre-configured</strong> with LLM access, but you can configure your own here.`;
     el = containerEl.createEl("p");
     el.innerHTML =
       "Be sure to use <i>intelligent</i> models. Lesser models generally will <strong><i>not</i></strong> work.";
+    el = containerEl.createEl("p");
+    el.style.padding = "0.5rem";
+    el.style.borderRadius = "0.25rem";
+    el.style.borderWidth = "1px";
+    el.style.borderStyle = "solid";
+    el.style.backgroundColor = "rgba(254, 252, 191, 0.12)"; // light yellow with alpha
+    el.style.borderColor = "var(--border-warning, #fde047)";
+    el.style.color = "var(--text-warning, #92400e)";
+    el.style.fontSize = "0.875rem";
+    el.style.marginBottom = "1rem";
+
+    el.innerHTML = `<strong>Beta Notice:</strong> LLM access is currently provided free of charge while this plugin is in beta. This may change in future versions, potentially requiring you to configure your own API key and endpoint.`;
 
     new Setting(containerEl)
       .setName("API Key")
@@ -66,13 +103,24 @@ export class MetaSettingTab extends PluginSettingTab {
     const presetButtonSetting = new Setting(containerEl);
     presetButtonSetting.settingEl.style.borderTop = "none";
 
-    // Add OpenAI button
+    // Add Default button with fetching a new API key
     presetButtonSetting.addButton((button) => {
       return button.setButtonText("Default").onClick(async () => {
+        // Check if we have a stored key in localStorage
+        let apiKey = localStorage.getItem(LOCAL_STORAGE_API_KEY);
+
+        // If no key exists, fetch a new one
+        if (!apiKey) {
+          apiKey = await this.fetchNewApiKey();
+          if (apiKey) {
+            localStorage.setItem(LOCAL_STORAGE_API_KEY, apiKey);
+          }
+        }
+
         this.plugin.settings.baseUrl = DEFAULT_SETTINGS.baseUrl;
         this.plugin.settings.model = DEFAULT_SETTINGS.model;
         this.plugin.settings.availableModels = DEFAULT_SETTINGS.availableModels;
-        this.plugin.settings.apiKey = DEFAULT_SETTINGS.apiKey;
+        this.plugin.settings.apiKey = apiKey || "";
         await this.plugin.saveSettings();
         this.display(); // Refresh the display to update the text field
       });
@@ -138,25 +186,23 @@ export class MetaSettingTab extends PluginSettingTab {
     });
 
     // Refresh button for models
-    if (this.plugin.settings.baseUrl !== DEFAULT_SETTINGS.baseUrl) {
-      modelSetting.addButton((button) => {
-        button
-          .setButtonText("Refresh")
-          .setCta() // Makes it stand out slightly
-          .setTooltip("Fetch the latest available models from the API")
-          .onClick(async () => {
-            button.setDisabled(true).setButtonText("Refreshing..."); // Disable button during refresh
-            try {
-              await this.plugin.refreshModelList();
-              this.display(); // Refresh the settings display to update the dropdown
-            } catch (error) {
-              console.error("Error refreshing model list:", error);
-              new Notice("Failed to refresh model list. Check console.");
-              button.setDisabled(false).setButtonText("Refresh");
-            }
-          });
-      });
-    }
+    modelSetting.addButton((button) => {
+      button
+        .setButtonText("Refresh")
+        .setCta() // Makes it stand out slightly
+        .setTooltip("Fetch the latest available models from the API")
+        .onClick(async () => {
+          button.setDisabled(true).setButtonText("Refreshing..."); // Disable button during refresh
+          try {
+            await this.plugin.refreshModelList();
+            this.display(); // Refresh the settings display to update the dropdown
+          } catch (error) {
+            console.error("Error refreshing model list:", error);
+            new Notice("Failed to refresh model list. Check console.");
+            button.setDisabled(false).setButtonText("Refresh");
+          }
+        });
+    });
 
     // Add advanced LLM settings
     containerEl.createEl("h3", { text: "Advanced LLM Settings" });

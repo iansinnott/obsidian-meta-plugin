@@ -4,7 +4,7 @@ import type { LanguageModelV1 } from "ai";
 import { createOpenAI, type OpenAIProvider } from "@ai-sdk/openai";
 import { generateText, streamText, type ToolSet } from "ai";
 import { createTeamManagerAgent } from "./llm/agents";
-import { DEFAULT_SETTINGS, MetaSettingTab } from "./settings";
+import { DEFAULT_SETTINGS, LOCAL_STORAGE_API_KEY, MetaSettingTab } from "./settings";
 import { META_SIDEBAR_VIEW_TYPE, MetaSidebarView, activateSidebarView } from "./sidebar";
 import { transformAnthropicRequest } from "./llm/utils/transformAnthropicRequest";
 import { ChunkProcessor } from "./llm/chunk-processor";
@@ -161,10 +161,49 @@ export class MetaPlugin extends Plugin {
    * Handle changes to the LLM configuration. Whenever the LLM settings change
    * we need to re-instantiate a few things with the updated information.
    */
-  handleApiSettingsUpdate() {
+  async handleApiSettingsUpdate() {
     // If we're using Anthropic, we need a different way to fetch models since
     // ai sdk doesn't provide that. Otherwise, everything should be the same.
     const baseUrl = this.settings.baseUrl;
+    const defaultBaseUrl = DEFAULT_SETTINGS.baseUrl;
+
+    // Check if we're using the Default provider but don't have an API key yet
+    if (baseUrl === defaultBaseUrl && !this.settings.apiKey) {
+      // Check if we have a stored key in localStorage
+      let apiKey = localStorage.getItem(LOCAL_STORAGE_API_KEY);
+
+      // If no key exists, fetch a new one
+      if (!apiKey) {
+        try {
+          const response = await fetch("https://cf-llm-oprah-bff.txn.workers.dev/key/generate", {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            apiKey = data.key;
+            if (apiKey) {
+              localStorage.setItem(LOCAL_STORAGE_API_KEY, apiKey);
+              this.settings.apiKey = apiKey;
+              await this.saveData(this.settings);
+            }
+          } else {
+            console.error("Failed to fetch API key:", response.statusText);
+            new Notice("Failed to fetch API key. Check console for details.");
+          }
+        } catch (error) {
+          console.error("Error fetching new API key:", error);
+          new Notice("Failed to fetch API key. Check console for details.");
+        }
+      } else {
+        // Use the stored key
+        this.settings.apiKey = apiKey;
+        await this.saveData(this.settings);
+      }
+    }
 
     // @todo Not the most robust check...
     const isAnthropic = () => baseUrl.includes("anthropic");
@@ -317,11 +356,53 @@ export class MetaPlugin extends Plugin {
     registerPluginInstance(this);
     await this.loadSettings();
 
+    // Ensure we have an API key if using the Default provider - do this in background
+    if (this.settings.baseUrl === DEFAULT_SETTINGS.baseUrl && !this.settings.apiKey) {
+      let apiKey = localStorage.getItem(LOCAL_STORAGE_API_KEY);
+
+      if (!apiKey) {
+        // Fetch key in the background without blocking plugin initialization
+        fetch("https://cf-llm-oprah-bff.txn.workers.dev/key/generate", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+          .then((response) => {
+            if (response.ok) {
+              return response.json();
+            }
+            throw new Error(`Failed to fetch API key: ${response.statusText}`);
+          })
+          .then((data) => {
+            apiKey = data.key;
+            if (apiKey) {
+              localStorage.setItem(LOCAL_STORAGE_API_KEY, apiKey);
+              this.settings.apiKey = apiKey;
+              this.saveData(this.settings).then(() => {
+                console.log("API key initialized on plugin load");
+                // Reinitialize API connections with the new key
+                this.handleApiSettingsUpdate();
+              });
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching API key on plugin load:", error);
+          });
+      } else {
+        // Use the stored key without blocking
+        this.settings.apiKey = apiKey;
+        this.saveData(this.settings).catch((error) => {
+          console.error("Error saving settings with stored API key:", error);
+        });
+      }
+    }
+
     // Set initial theme attribute and register listener for changes
     this.setThemeAttribute();
     this.registerEvent(this.app.workspace.on("css-change", this.setThemeAttribute));
 
-    this.handleApiSettingsUpdate();
+    await this.handleApiSettingsUpdate();
 
     // Restore last active conversation (or create new)
     await this.restoreActiveConversation();
@@ -330,7 +411,7 @@ export class MetaPlugin extends Plugin {
     this.registerView(META_SIDEBAR_VIEW_TYPE, (leaf) => new MetaSidebarView(leaf, this));
 
     // This creates an icon in the left ribbon.
-    const ribbonIconEl = this.addRibbonIcon("brain", "Obsidian Meta Plugin", (evt: MouseEvent) => {
+    const ribbonIconEl = this.addRibbonIcon("brain", "Meta Plugin", (evt: MouseEvent) => {
       // Called when the user clicks the icon.
       activateSidebarView(this);
     });
@@ -403,7 +484,7 @@ export class MetaPlugin extends Plugin {
 
   async saveSettings() {
     await this.saveData(this.settings);
-    this.handleApiSettingsUpdate();
+    await this.handleApiSettingsUpdate();
   }
 
   async refreshModelList(): Promise<string[]> {
