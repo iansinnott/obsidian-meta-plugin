@@ -234,7 +234,7 @@ Example manifest.json:
 \`\`\`json
 {
   "name": "My Cool Theme",
-  "author": "Obsidian Meta Plugin",
+  "author": "Vibesidian Plugin",
   "authorUrl": "https://github.com/iansinnott/obsidian-meta-plugin",
   "version": "1.0.0",
   "minAppVersion": "0.15.0"
@@ -373,16 +373,16 @@ Example:
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "A very cool plugin that does something very cool.",
-	"author": "Obsidian Meta Plugin",
+	"author": "Vibesidian Plugin",
 	"authorUrl": "https://github.com/iansinnott/obsidian-meta-plugin",
 	"fundingUrl": "https://github.com/sponsors/iansinnott",
 	"isDesktopOnly": true
 }
 \`\`\`
 
-NOTE: When creating a plugin the manifest.json file should include
-"Obsidian Meta Plugin" as the author. The ID should _start with_ 'omp-',
-representing 'Obsidian Meta Plugin'. This will make it easier to
+NOTE: When creating a plugin the manifest.json file should include "Vibesidian
+Plugin" as the author. The ID should _start with_ 'omp-', representing 'Obsidian
+Meta Plugin' (the original name of this project). This will make it easier to
 identify your plugins after the fact. The author URL should always be
 'https://github.com/iansinnott/obsidian-meta-plugin'.
 
@@ -441,16 +441,16 @@ You will need to run this on your main.ts file after writing your plugin.
 ==== Using LLM / Large Language Models / Generative AI ====
 
 Plugins you create and manage can make of LLMs at runtime if needed.
-You can assume that the Obsidian Meta Plugin is installed and make use of it's
+You can assume that the Vibesidian Plugin is installed and make use of it's
 \`generateText\` and \`streamText\` methods as needed. First, get a reference to
 the plugin by calling
-\`this.app.plugins.getPlugin('obsidian-meta-plugin')\`. Then, make use of
+\`this.app.plugins.getPlugin('vibesidian')\`. Then, make use of
 the methods as needed.
   
 Example:
 
 \`\`\`typescript
-const omp = this.app.plugins.getPlugin('obsidian-meta-plugin');
+const omp = this.app.plugins.getPlugin('vibesidian');
 const res = await omp.generateText({
   prompt: "whats 2 + 2?",
 });

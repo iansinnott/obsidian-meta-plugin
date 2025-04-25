@@ -1,5 +1,5 @@
 {
-  "name": "obsidian-meta-plugin",
+  "name": "vibesidian",
   "version": "1.3.1",
   "description": "A plugin for Obsidian that can modify Obsidian. It can create or modify plugins, themes and settings. Think of it as your personal Obsidian developer.",
   "main": "main.js",
@@ -7,14 +7,14 @@
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "version": "node version-bump.mjs && git add manifest.json versions.json",
-    "tag": "ovp_version=$(node -p 'require(\"./manifest.json\").version'); git tag -a v$ovp_version -m v$ovp_version",
+    "tag": "ovp_version=$(node -p 'require(\"./manifest.json\").version'); git tag -a $ovp_version -m $ovp_version",
     "dist": "node scripts/create-dist.mjs",
     "release": "node scripts/release.mjs"
   },
   "keywords": [
     "obsidian",
-    "plugin",
-    "meta",
+    "plugin development",
+    "theme development",
     "LLM"
   ],
   "author": "Ian Sinnott",
