@@ -21,8 +21,8 @@ https://github.com/user-attachments/assets/da8ca679-4d37-4e27-875c-4210888341a9
 - **LLM-Powered Assistance**: Integrates with various language models (Claude, GPT, Llama) to help you customize Obsidian
 - **Plugin Development**: Create and modify plugins directly within Obsidian
 - **CSS Customization**: Edit themes and CSS snippets with AI assistance
-- **Settings Management**: Modify Obsidian settings through natural language requests
-- **Interactive UI**: Clean React-based sidebar interface with real-time streaming responses
+- **Content Managemetn**: Ask the AI to find new links, summarize, draft, etc.
+- **Interactive UI**: The classic chat interface returns...
 
 ## Limitations
 
@@ -36,7 +36,7 @@ It's not yet in community plugins. Until it's approved use the manual installati
 
 ### Manual Installation
 
-1. Download the latest release from the [Releases page](https://github.com/iansinnott/obsidian-meta-plugin/releases)
+1. Download the latest release from the [Releases page](https://github.com/iansinnott/vibesidian/releases)
 2. Extract the zip archive into your vault's plugins folder: `<vault>/.obsidian/plugins/`
 3. Enable the plugin in Obsidian's Community Plugins settings
 
@@ -58,7 +58,7 @@ It's not yet in community plugins. Until it's approved use the manual installati
 
 ```bash
 # Clone the repository
-git clone https://github.com/iansinnott/obsidian-meta-plugin.git vibesidian
+git clone https://github.com/iansinnott/vibesidian.git
 
 # Navigate to the plugin directory
 cd vibesidian

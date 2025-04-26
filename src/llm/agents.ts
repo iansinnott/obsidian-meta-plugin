@@ -235,7 +235,7 @@ Example manifest.json:
 {
   "name": "My Cool Theme",
   "author": "Vibesidian Plugin",
-  "authorUrl": "https://github.com/iansinnott/obsidian-meta-plugin",
+  "authorUrl": "https://github.com/iansinnott/vibesidian",
   "version": "1.0.0",
   "minAppVersion": "0.15.0"
 }
@@ -374,7 +374,7 @@ Example:
 	"minAppVersion": "0.15.0",
 	"description": "A very cool plugin that does something very cool.",
 	"author": "Vibesidian Plugin",
-	"authorUrl": "https://github.com/iansinnott/obsidian-meta-plugin",
+	"authorUrl": "https://github.com/iansinnott/vibesidian",
 	"fundingUrl": "https://github.com/sponsors/iansinnott",
 	"isDesktopOnly": true
 }
@@ -383,7 +383,7 @@ Example:
 NOTE: When creating a plugin the manifest.json file should include "Vibesidian
 Plugin" as the author. The ID should _start with_ 'vibe-', a shorthand for
 'Vibesidian Plugin'. This will make it easier to identify your plugins after the
-fact. The author URL should always be 'https://github.com/iansinnott/obsidian-meta-plugin'.
+fact. The author URL should always be 'https://github.com/iansinnott/vibesidian'.
 
 ==== No addidtional build step required ====
   

@@ -372,7 +372,7 @@ export class MetaPlugin extends Plugin {
 
   /**
    * Generate text using the configured language model
-   * This method allows other plugins created by meta plugin to use LLM functionality
+   * This method allows other plugins created by Vibesidian to use LLM functionality
    */
   public async generateText<TTools extends ToolSet = {}, TInput = unknown, TOutput = unknown>(
     options: Omit<Parameters<typeof generateText<TTools, TInput, TOutput>>[0], "model">
@@ -389,7 +389,7 @@ export class MetaPlugin extends Plugin {
 
   /**
    * Stream text using the configured language model
-   * This method allows other plugins created by meta plugin to use streaming LLM functionality
+   * This method allows other plugins created by Vibesidian to use streaming LLM functionality
    */
   public streamText<TTools extends ToolSet = {}, TInput = unknown, TOutput = unknown>(
     options: Omit<Parameters<typeof streamText<TTools, TInput, TOutput>>[0], "model">
@@ -425,15 +425,15 @@ export class MetaPlugin extends Plugin {
     this.registerView(META_SIDEBAR_VIEW_TYPE, (leaf) => new MetaSidebarView(leaf, this));
 
     // This creates an icon in the left ribbon.
-    const ribbonIconEl = this.addRibbonIcon("brain", "Meta Plugin", (evt: MouseEvent) => {
+    const ribbonIconEl = this.addRibbonIcon("brain", "Vibesidian", (evt: MouseEvent) => {
       // Called when the user clicks the icon.
       activateSidebarView(this);
     });
 
     // Add command to open the sidebar view
     this.addCommand({
-      id: "open-meta-sidebar",
-      name: "Open Meta Plugin Chat",
+      id: "open-vibesidian-sidebar",
+      name: "Open Vibe Chat",
       callback: async () => {
         await activateSidebarView(this);
       },

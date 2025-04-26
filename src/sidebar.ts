@@ -28,7 +28,7 @@ export class MetaSidebarView extends ItemView {
 
   // Display text shown in the tab
   getDisplayText(): string {
-    return "Meta Plugin Chat";
+    return "Vibe Chat";
   }
 
   // Icon shown in the sidebar

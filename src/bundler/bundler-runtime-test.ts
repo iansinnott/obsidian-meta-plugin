@@ -60,8 +60,8 @@ export default class SamplePlugin extends Plugin {
   "name": "Sample Meta Plugin",
   "version": "1.0.0",
   "minAppVersion": "0.15.0",
-  "description": "A sample plugin created by Meta Plugin",
-  "author": "Meta Plugin",
+  "description": "A sample plugin created by Vibesidian",
+  "author": "Vibesidian",
   "isDesktopOnly": false
 }
 `;
@@ -166,8 +166,8 @@ export const VERSION = '1.0.0';
   "name": "Advanced Meta Plugin",
   "version": "1.0.0",
   "minAppVersion": "0.15.0",
-  "description": "An advanced plugin created by Meta Plugin with multiple source files",
-  "author": "Meta Plugin",
+  "description": "An advanced plugin created by Vibesidian with multiple source files",
+  "author": "Vibesidian",
   "isDesktopOnly": false
 }
 `;
