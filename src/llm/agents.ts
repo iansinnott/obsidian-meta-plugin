@@ -214,7 +214,7 @@ Obsidian UI.
 
 Snippets allow customizing the look and feel of Obsidian through CSS. The user can have any number of snippets active at a time.
 
-When creating snippets, the snippet name should begin with 'omp-'. This will make it easier to identify your snippets after the fact.
+When creating snippets, the snippet name should begin with 'vibe-'. This will make it easier to identify your snippets after the fact.
 
 ==== Themes ====
 
@@ -222,7 +222,7 @@ The user will only have one theme active at a time. You can find out about curre
 
 ==== Creating Themes ====
 
-When creating themes, the theme directory should begin with 'omp-'. This will make it easier to identify your themes after the fact.
+When creating themes, the theme directory should begin with 'vibe-'. This will make it easier to identify your themes after the fact.
 
 Themes MUST include the following files:
 
@@ -368,7 +368,7 @@ Example:
 
 \`\`\`json
 {
-	"id": "omp-my-cool-plugin",
+	"id": "vibe-my-cool-plugin",
 	"name": "My Cool Plugin",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
@@ -381,10 +381,9 @@ Example:
 \`\`\`
 
 NOTE: When creating a plugin the manifest.json file should include "Vibesidian
-Plugin" as the author. The ID should _start with_ 'omp-', representing 'Obsidian
-Meta Plugin' (the original name of this project). This will make it easier to
-identify your plugins after the fact. The author URL should always be
-'https://github.com/iansinnott/obsidian-meta-plugin'.
+Plugin" as the author. The ID should _start with_ 'vibe-', a shorthand for
+'Vibesidian Plugin'. This will make it easier to identify your plugins after the
+fact. The author URL should always be 'https://github.com/iansinnott/obsidian-meta-plugin'.
 
 ==== No addidtional build step required ====
   
@@ -428,7 +427,7 @@ IMPORTANT: All paths you provide should be relative paths. They will be interpre
 DEVELOPERS NOTE: Windows users will have a different path structure. Error messages should tell you if you're on a Windows system.
   
 NOTE: When listing plugins, assume that any plugin's who's ID starts
-with 'omp-' were authored by the 'Obsidian Meta Plugin' agent, i.e. the
+with 'vibe-' were authored by the 'Vibesidian Plugin' agent, i.e. the
 controller of the system which you are a part of.
   
 ==== Bundling TypeScript ====

@@ -1,22 +1,20 @@
 <p align="center">
-  <img src="assets/omp-transparent-512px.png" alt="Obsidian Meta Plugin Logo" width="256"/>
+  <img src="assets/vibesidian-transparent-512px.png" alt="Vibesidian Logo" width="256"/>
 </p>
 
 <p align="center">
-  A plugin that can write other plugins.
+  A plugin that can write other plugins (and themes!)
 </p>
 
-<h1 align="center">
-  Obsidian Meta Plugin
-</h1>
+Now you can vibe code your own Obsidian plugins without coding at all! Just describe what you want and you _might_ get it.
 
-A plugin for [Obsidian](https://obsidian.md) that can modify Obsidian itself. It can create or modify plugins, themes, and settings, acting as your personal Obsidian developer.
-
-Now you can vibe code your own Obsidian plugins without coding at all! Just describe what you want and OMP _might_ make it happen.
+Vibesidian is a plugin for [Obsidian](https://obsidian.md) that can modify Obsidian itself. It can create or modify plugins, themes, and settings, acting as your personal Obsidian developer.
 
 ## Demo
 
 https://github.com/user-attachments/assets/da8ca679-4d37-4e27-875c-4210888341a9
+
+**NOTE:** Formerly Obsidian Meta Plugin, which shows up in some of the videos.
 
 ## Features
 
@@ -25,6 +23,10 @@ https://github.com/user-attachments/assets/da8ca679-4d37-4e27-875c-4210888341a9
 - **CSS Customization**: Edit themes and CSS snippets with AI assistance
 - **Settings Management**: Modify Obsidian settings through natural language requests
 - **Interactive UI**: Clean React-based sidebar interface with real-time streaming responses
+
+## Limitations
+
+This plugin uses large language models (LLMs) to modify Obsidian on your behalf. LLMs can make mistakes.
 
 ## Installation
 
@@ -40,7 +42,7 @@ It's not yet in community plugins. Until it's approved use the manual installati
 
 ## Usage
 
-1. Click the Meta Plugin icon in the ribbon to open the sidebar
+1. Click the Vibesidian icon in the ribbon to open the sidebar
 2. Enter your request (e.g., "Create a plugin that adds a word count to the status bar")
 3. Choose your preferred language model
 4. The plugin will process your request and provide interactive results
@@ -56,10 +58,10 @@ It's not yet in community plugins. Until it's approved use the manual installati
 
 ```bash
 # Clone the repository
-git clone https://github.com/iansinnott/obsidian-meta-plugin.git
+git clone https://github.com/iansinnott/obsidian-meta-plugin.git vibesidian
 
 # Navigate to the plugin directory
-cd obsidian-meta-plugin
+cd vibesidian
 
 # Install dependencies
 bun install
@@ -93,13 +95,43 @@ bun run version
 
 ## Points of interst
 
-Todo... Anthropic file editor use,
+### Claude Text Editor
+
+Did you know Claude has an experimental (as of 2025-04-26) text editor ability? It's documented here:
+
+- https://docs.anthropic.com/en/docs/build-with-claude/tool-use/text-editor-tool
+
+When using Sonnet 3.7 as your LLM Vibesidian will make use of this API for reading and editing files. This is important for long files that would otherwise blow up the context window.
+
+### Agents of Agents
+
+Vibesidian is a multi-agent system. Generally speaking a "manager" agent delegates task to subordinate agents which get tasks done.
+
+This is not a new idea, but it's another proof point showing what agents can accomplish working together.
+
+General structure:
+
+- Manager agent
+  - Theme agent (manages themes and snippets)
+    - Example: "Change the color of the ribbon buttons to hot pink"
+    - Example: "Write me a new theme based on The Warriors colors"
+  - Plugin agent (manages plugins)
+    - Exmaple: "Write me a plugin to automatically tag my posts based on content"
+    - Example: "Write a plugin to highlight specific terms if they appear in my notes"
+  - Content agenet (manages note content)
+    - Example: "Summarize this note"
+    - Example: "What did i write about last week?"
+    - Example: "Write me a poem about PKM tools"
+  - Workspace agent (manages active tabs)
+    - Example: "Open my daily note from last monday"
+  - File editor agent (handles file editing tasks)
+    - File editor is used indirectly. For example, if you ask the plugin to create snippets or themes it will use the file editor.
 
 ## Security
 
 (... awkward silence)
 
-Obsidian plugins are, in general, a security nightmare. This is not specific to OMP, but general to all plugins. From the [official documentation](https://help.obsidian.md/plugin-security#Plugin+capabilities), any Obsidian plugin can:
+Obsidian plugins are, in general, a security nightmare. This is not specific to Vibsidian, but general to all plugins. From the [official documentation](https://help.obsidian.md/plugin-security#Plugin+capabilities), any Obsidian plugin can:
 
 - Access files on your computer.
 - Connect to internet.
@@ -107,7 +139,7 @@ Obsidian plugins are, in general, a security nightmare. This is not specific to 
 
 So, you should be skeptical of **_any plugin_** you install.
 
-With that said, let's talk about the excitement OMP brings to the picture. OMP gives an AI access to all these superpowers. This is how the AI is able to modify Obsidian on your behalf, however, it means that AI responses can have **real-world impact** on your computer.
+With that said, let's talk about the excitement Vibesidian brings to the picture. Vibesidian gives an AI access to all these superpowers. This is how the AI is able to modify Obsidian on your behalf, however, it means that AI responses can have **real-world impact** on your computer.
 
 ### Hallucinations
 
@@ -142,6 +174,25 @@ There's a risk that specially crafted text within a note, or a malicious prompt 
 
 **Mitigation:** Use a smart model. Other than that, if you have suggestions please open an issue or PR. Contributions welcome.
 
+## FAQ
+
+- **Will my Obsidian vault content be sent to a third party?**
+
+  It depends on what model you use. You can run Vibesidain with Ollama, or any provider that adheres to the Openai API. This means your interactions can remain entirely local.
+
+  However, if you utilize a hosted provider like OpenAI or Anthropic your messages and the results of tool calls will be sent to the provider.
+
+- **Can I use local LLMs like Ollama with Vibesidian?**
+
+  Yes! You can use any AI provider that exposes an OpenAI-compatible endpoint, and Ollama does exactly that. There are some caveats though.
+
+  1. Any model you use must support **tool use**. You can see a list of compatible Ollama models here: https://ollama.com/search?c=tools
+  2. The model must be intelligent, otherwise it will simply fail at any task you ask of it. When developing this plugin I used `gpt-4.1` and `claude-sonnet-3.7`. If you use models less intelligent than those two you will likely get poor results.
+
+- **Can I use Vibesidian offline?**
+
+  Only if you are using a local LLM.
+
 ## Release Process
 
 To create a new release, simply run the automated release script:
@@ -161,10 +212,10 @@ This script will:
 
 ## Alternate taglines
 
+- Cursor / Windsurf for Obsididan
 - The plugin that builds other plugins
 - The last plugin you'll ever need
 - You're own personal Obsidian dev team
-- Cursor / Windsurf for Obsididan
 
 ## License
 

@@ -30,7 +30,7 @@ try {
   }
 
   // Create zip command with output in releases directory
-  const zipFileName = `omp-${version}.zip`;
+  const zipFileName = `vibesidian-${version}.zip`;
   const zipFilePath = path.join(releasesDir, zipFileName);
   const zipCommand = `zip -r "${zipFilePath}" ${filesToZip.join(" ")}`;
 
