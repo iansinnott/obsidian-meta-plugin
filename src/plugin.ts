@@ -4,13 +4,89 @@ import type { LanguageModelV1 } from "ai";
 import { createOpenAI, type OpenAIProvider } from "@ai-sdk/openai";
 import { generateText, streamText, type ToolSet } from "ai";
 import { createTeamManagerAgent } from "./llm/agents";
-import { DEFAULT_SETTINGS, MetaSettingTab } from "./settings";
+import {
+  DEFAULT_SETTINGS,
+  LOCAL_STORAGE_API_KEY,
+  MetaSettingTab,
+  type EphemeralKeyEntry,
+} from "./settings";
 import { META_SIDEBAR_VIEW_TYPE, MetaSidebarView, activateSidebarView } from "./sidebar";
 import { transformAnthropicRequest } from "./llm/utils/transformAnthropicRequest";
 import { ChunkProcessor } from "./llm/chunk-processor";
 import { registerPluginInstance } from "./hooks/state";
 import type { VaultAdapter, BundlerOptions, BundleResult, WASMBundler } from "./bundler/bundler";
 import { createAdvancedPlugin, createSamplePlugin } from "./bundler/bundler-runtime-test";
+
+// ---------------------------------------------------------------------------
+// Ephemeral API-key bootstrap helpers
+// ---------------------------------------------------------------------------
+
+/** Type-guard that the stored value matches {@link EphemeralKeyEntry}. */
+function isEphemeralKeyEntry(value: unknown): value is EphemeralKeyEntry {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "provider" in value &&
+    "key" in value &&
+    typeof (value as any).provider === "string" &&
+    typeof (value as any).key === "string"
+  );
+}
+
+/**
+ * Attempt to resolve an API key for the given provider URL.
+ * – Checks localStorage. If the stored entry belongs to *this* provider, reuse it.
+ * – Otherwise fetches a new key from the `/key/generate` endpoint **in the
+ *   background**, then caches it alongside the provider identifier.
+ *
+ * Returns the key immediately if available, *undefined* otherwise.  A pending
+ * network request is stored in `inFlightKeyPromise` so concurrent calls never
+ * issue duplicate fetches.
+ */
+function createKeyResolver() {
+  let inFlightKeyPromise: Promise<void> | null = null;
+
+  async function fetchAndStoreKey(baseUrl: string): Promise<void> {
+    const endpoint = "https://cf-llm-oprah-bff.txn.workers.dev/key/generate";
+    const resp = await fetch(endpoint, { headers: { "Content-Type": "application/json" } });
+    if (!resp.ok) throw new Error(`Failed to fetch API key: ${resp.statusText}`);
+    const data = (await resp.json()) as { key?: string };
+    if (data.key) {
+      const entry: EphemeralKeyEntry = { provider: baseUrl, key: data.key };
+      localStorage.setItem(LOCAL_STORAGE_API_KEY, JSON.stringify(entry));
+    }
+  }
+
+  return async function resolveKey(baseUrl: string): Promise<string | undefined> {
+    try {
+      const raw = localStorage.getItem(LOCAL_STORAGE_API_KEY);
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        if (isEphemeralKeyEntry(parsed) && parsed.provider === baseUrl) {
+          return parsed.key;
+        }
+      }
+
+      // No valid key – kick off background fetch once.
+      if (!inFlightKeyPromise) {
+        inFlightKeyPromise = fetchAndStoreKey(baseUrl).finally(() => {
+          inFlightKeyPromise = null;
+        });
+      }
+
+      // Do *not* await, user UI continues loading.
+      return undefined;
+    } catch (err) {
+      console.error("Error resolving API key", err);
+      return undefined;
+    }
+  };
+}
+
+// Single instance shared across the plugin.
+const resolveEphemeralKey = createKeyResolver();
+
+// ---------------------------------------------------------------------------
 
 export class MetaPlugin extends Plugin {
   settings: typeof DEFAULT_SETTINGS;
@@ -166,43 +242,19 @@ export class MetaPlugin extends Plugin {
     // ai sdk doesn't provide that. Otherwise, everything should be the same.
     const baseUrl = this.settings.baseUrl;
     const defaultBaseUrl = DEFAULT_SETTINGS.baseUrl;
-    const LOCAL_STORAGE_API_KEY = "vibesidian-api-key";
 
-    // Check if we're using the Default provider but don't have an API key yet
+    // Ensure we have an API key for the default provider. We try to reuse a
+    // cached key synchronously; if none exists we trigger background fetch and
+    // *exit early*.  When the key eventually arrives, `ensureApiKeyBackground`
+    // re-invokes this method.
     if (baseUrl === defaultBaseUrl && !this.settings.apiKey) {
-      // Check if we have a stored key in localStorage
-      let apiKey = localStorage.getItem(LOCAL_STORAGE_API_KEY);
-
-      // If no key exists, fetch a new one
-      if (!apiKey) {
-        try {
-          const response = await fetch("https://cf-llm-oprah-bff.txn.workers.dev/key/generate", {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            apiKey = data.key;
-            if (apiKey) {
-              localStorage.setItem(LOCAL_STORAGE_API_KEY, apiKey);
-              this.settings.apiKey = apiKey;
-              await this.saveData(this.settings);
-            }
-          } else {
-            console.error("Failed to fetch API key:", response.statusText);
-            new Notice("Failed to fetch API key. Check console for details.");
-          }
-        } catch (error) {
-          console.error("Error fetching new API key:", error);
-          new Notice("Failed to fetch API key. Check console for details.");
-        }
-      } else {
-        // Use the stored key
-        this.settings.apiKey = apiKey;
+      const cachedKey = await resolveEphemeralKey(baseUrl);
+      if (cachedKey) {
+        this.settings.apiKey = cachedKey;
         await this.saveData(this.settings);
+      } else {
+        this.ensureApiKeyBackground();
+        return; // Cannot proceed without credentials.
       }
     }
 
@@ -357,48 +409,8 @@ export class MetaPlugin extends Plugin {
     registerPluginInstance(this);
     await this.loadSettings();
 
-    // Ensure we have an API key if using the Default provider - do this in background
-    if (this.settings.baseUrl === DEFAULT_SETTINGS.baseUrl && !this.settings.apiKey) {
-      const LOCAL_STORAGE_API_KEY = "vibesidian-api-key";
-      let apiKey = localStorage.getItem(LOCAL_STORAGE_API_KEY);
-
-      if (!apiKey) {
-        // Fetch key in the background without blocking plugin initialization
-        fetch("https://cf-llm-oprah-bff.txn.workers.dev/key/generate", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
-          .then((response) => {
-            if (response.ok) {
-              return response.json();
-            }
-            throw new Error(`Failed to fetch API key: ${response.statusText}`);
-          })
-          .then((data) => {
-            apiKey = data.key;
-            if (apiKey) {
-              localStorage.setItem(LOCAL_STORAGE_API_KEY, apiKey);
-              this.settings.apiKey = apiKey;
-              this.saveData(this.settings).then(() => {
-                console.log("API key initialized on plugin load");
-                // Reinitialize API connections with the new key
-                this.handleApiSettingsUpdate();
-              });
-            }
-          })
-          .catch((error) => {
-            console.error("Error fetching API key on plugin load:", error);
-          });
-      } else {
-        // Use the stored key without blocking
-        this.settings.apiKey = apiKey;
-        this.saveData(this.settings).catch((error) => {
-          console.error("Error saving settings with stored API key:", error);
-        });
-      }
-    }
+    // Kick off non-blocking API-key resolution if needed.
+    this.ensureApiKeyBackground();
 
     // Set initial theme attribute and register listener for changes
     this.setThemeAttribute();
@@ -553,5 +565,31 @@ export class MetaPlugin extends Plugin {
       this.processorsMap.set(key, processor);
     }
     return this.processorsMap.get(key)!;
+  }
+
+  // ---------------------------------------------------------------------
+  // API-key bootstrap utilities
+  // ---------------------------------------------------------------------
+
+  /**
+   * Kick off background resolution of an API key *if* we're using the default
+   * provider *and* no key is configured yet.  If/when a key arrives it is
+   * persisted and {@link handleApiSettingsUpdate} is invoked again so the LLM
+   * provider is recreated with proper credentials.
+   */
+  private ensureApiKeyBackground(): void {
+    // Only relevant for the default provider.
+    if (this.settings.baseUrl !== DEFAULT_SETTINGS.baseUrl || this.settings.apiKey) return;
+
+    resolveEphemeralKey(this.settings.baseUrl)
+      .then(async (key) => {
+        if (key && !this.settings.apiKey) {
+          this.settings.apiKey = key;
+          // Persist without triggering handleApiSettingsUpdate → we'll call it explicitly.
+          await this.saveData(this.settings);
+          await this.handleApiSettingsUpdate();
+        }
+      })
+      .catch((err) => console.error("Failed to resolve API key", err));
   }
 }

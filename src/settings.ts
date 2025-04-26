@@ -1,7 +1,55 @@
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import type { MetaPlugin as IMetaPlugin } from "./plugin";
 
-const LOCAL_STORAGE_API_KEY = "vibesidian-api-key";
+// ---------------------------------------------------------------------------
+// Ephemeral API-key helpers (mirrors logic in plugin.ts)
+// ---------------------------------------------------------------------------
+
+/**
+ * The localStorage slot that stores a JSON-encoded {@link EphemeralKeyEntry}.
+ * It is *scoped* by provider base URL so an old key from provider X never
+ * overwrites a fresh key from provider Y.
+ */
+export const LOCAL_STORAGE_API_KEY = "vibesidian-api-key" as const;
+
+export interface EphemeralKeyEntry {
+  /** The provider baseUrl the key was fetched for. */
+  provider: string;
+  /** The actual API key string. */
+  key: string;
+}
+
+function parseEntry(raw: string | null): EphemeralKeyEntry | undefined {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "provider" in parsed &&
+      "key" in parsed &&
+      typeof (parsed as any).provider === "string" &&
+      typeof (parsed as any).key === "string"
+    ) {
+      return parsed as EphemeralKeyEntry;
+    }
+  } catch {
+    /* swallow – value might be legacy plain string */
+  }
+  // legacy format – treat raw string itself as key with unknown provider
+  return { provider: "", key: raw } as EphemeralKeyEntry;
+}
+
+function getStoredKeyForProvider(baseUrl: string): string | undefined {
+  const entry = parseEntry(localStorage.getItem(LOCAL_STORAGE_API_KEY));
+  if (!entry) return undefined;
+  return entry.provider === baseUrl || entry.provider === "" ? entry.key : undefined;
+}
+
+function storeKeyForProvider(baseUrl: string, key: string): void {
+  const entry: EphemeralKeyEntry = { provider: baseUrl, key };
+  localStorage.setItem(LOCAL_STORAGE_API_KEY, JSON.stringify(entry));
+}
 
 export const DEFAULT_SETTINGS = {
   apiKey: "",
@@ -49,13 +97,13 @@ export class MetaSettingTab extends PluginSettingTab {
 
     // Auto-fetch API key if using Default provider and no key exists - do this in background
     if (this.plugin.settings.baseUrl === DEFAULT_SETTINGS.baseUrl) {
-      const existingApiKey = localStorage.getItem(LOCAL_STORAGE_API_KEY);
+      const existingApiKey = getStoredKeyForProvider(this.plugin.settings.baseUrl);
       if (!existingApiKey) {
         // Start fetch in background without awaiting
         this.fetchNewApiKey()
           .then((apiKey) => {
             if (apiKey) {
-              localStorage.setItem(LOCAL_STORAGE_API_KEY, apiKey);
+              storeKeyForProvider(this.plugin.settings.baseUrl, apiKey);
               this.plugin.settings.apiKey = apiKey;
               this.plugin.saveSettings().then(() => {
                 new Notice("API key initialized successfully");
@@ -75,10 +123,10 @@ export class MetaSettingTab extends PluginSettingTab {
     containerEl.createEl("h3", { text: "LLM Connection Settings" });
     let el;
     el = containerEl.createEl("p");
-    el.innerHTML = `This plugin comes <strong>pre-configured</strong> with LLM access, but you can configure your own here.`;
+    el.innerHTML = `This plugin comes <i>pre-configured</i> with LLM access, but you can configure your own here.`;
     el = containerEl.createEl("p");
     el.innerHTML =
-      "Be sure to use <i>intelligent</i> models. Lesser models generally will <strong><i>not</i></strong> work.";
+      "Be sure to use <i>intelligent</i> models. Lesser models generally will <i>not</i> work.";
     el = containerEl.createEl("p");
     el.style.padding = "0.5rem";
     el.style.borderRadius = "0.25rem";
@@ -90,7 +138,7 @@ export class MetaSettingTab extends PluginSettingTab {
     el.style.fontSize = "0.875rem";
     el.style.marginBottom = "1rem";
 
-    el.innerHTML = `<strong>Beta Notice:</strong> LLM access is currently provided free of charge while this plugin is in beta. This may change in future versions, potentially requiring you to configure your own API key and endpoint.`;
+    el.innerHTML = `<strong>Beta Notice:</strong> LLM access is currently provided for free while this plugin is in beta. I cover the costs. This may change in future versions, potentially requiring you to configure your own API key and endpoint.`;
 
     new Setting(containerEl)
       .setName("API Key")
@@ -129,21 +177,19 @@ export class MetaSettingTab extends PluginSettingTab {
     // Add Default button with fetching a new API key
     presetButtonSetting.addButton((button) => {
       return button.setButtonText("Default").onClick(async () => {
-        // Check if we have a stored key in localStorage
-        let apiKey = localStorage.getItem(LOCAL_STORAGE_API_KEY);
-
-        // If no key exists, fetch a new one
+        // Reuse or fetch + store key scoped to the default provider
+        let apiKey = getStoredKeyForProvider(DEFAULT_SETTINGS.baseUrl);
         if (!apiKey) {
           apiKey = await this.fetchNewApiKey();
           if (apiKey) {
-            localStorage.setItem(LOCAL_STORAGE_API_KEY, apiKey);
+            storeKeyForProvider(DEFAULT_SETTINGS.baseUrl, apiKey);
           }
         }
 
         this.plugin.settings.baseUrl = DEFAULT_SETTINGS.baseUrl;
         this.plugin.settings.model = DEFAULT_SETTINGS.model;
-        this.plugin.settings.availableModels = DEFAULT_SETTINGS.availableModels;
         this.plugin.settings.apiKey = apiKey || "";
+        await this.plugin.refreshModelList();
         await this.plugin.saveSettings();
         this.display(); // Refresh the display to update the text field
       });
@@ -209,25 +255,23 @@ export class MetaSettingTab extends PluginSettingTab {
     });
 
     // Refresh button for models
-    if (this.plugin.settings.baseUrl !== DEFAULT_SETTINGS.baseUrl) {
-      modelSetting.addButton((button) => {
-        button
-          .setButtonText("Refresh")
-          .setCta() // Makes it stand out slightly
-          .setTooltip("Fetch the latest available models from the API")
-          .onClick(async () => {
-            button.setDisabled(true).setButtonText("Refreshing..."); // Disable button during refresh
-            try {
-              await this.plugin.refreshModelList();
-              this.display(); // Refresh the settings display to update the dropdown
-            } catch (error) {
-              console.error("Error refreshing model list:", error);
-              new Notice("Failed to refresh model list. Check console.");
-              button.setDisabled(false).setButtonText("Refresh");
-            }
-          });
-      });
-    }
+    modelSetting.addButton((button) => {
+      button
+        .setButtonText("Refresh")
+        .setCta() // Makes it stand out slightly
+        .setTooltip("Fetch the latest available models from the API")
+        .onClick(async () => {
+          button.setDisabled(true).setButtonText("Refreshing..."); // Disable button during refresh
+          try {
+            await this.plugin.refreshModelList();
+            this.display(); // Refresh the settings display to update the dropdown
+          } catch (error) {
+            console.error("Error refreshing model list:", error);
+            new Notice("Failed to refresh model list. Check console.");
+            button.setDisabled(false).setButtonText("Refresh");
+          }
+        });
+    });
 
     // Add advanced LLM settings
     containerEl.createEl("h3", { text: "Advanced LLM Settings" });
