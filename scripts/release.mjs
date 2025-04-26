@@ -71,7 +71,7 @@ async function main() {
 
   // Run the release steps
   await runCommand("bun run build");
-  await runCommand("bun run version"); // This likely reads the new version from package.json
+  await runCommand("node version-bump.mjs"); // This likely reads the new version from package.json
   await runCommand("git add .");
   await runCommand(`git commit -m "chore: prepare release v${newVersion}"`);
   await runCommand("bun run tag"); // This reads from manifest.json, which 'version' updates
