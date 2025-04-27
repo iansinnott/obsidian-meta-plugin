@@ -242,6 +242,7 @@ export class MetaPlugin extends Plugin {
     // ai sdk doesn't provide that. Otherwise, everything should be the same.
     const baseUrl = this.settings.baseUrl;
     const defaultBaseUrl = DEFAULT_SETTINGS.baseUrl;
+    const model = this.settings.model;
 
     // Ensure we have an API key for the default provider. We try to reuse a
     // cached key synchronously; if none exists we trigger background fetch and
@@ -259,7 +260,7 @@ export class MetaPlugin extends Plugin {
     }
 
     // @todo Not the most robust check...
-    const isAnthropic = () => baseUrl.includes("anthropic");
+    const isAnthropic = () => model.includes("sonnet");
 
     this.api = {
       models: {
