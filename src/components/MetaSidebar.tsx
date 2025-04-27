@@ -86,7 +86,10 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
           default:
             text = `Error ${code}. Please try again later.`;
         }
-        showAssistant(text);
+
+        // NOTE: For now we don't put this in the message stream because we
+        // don't have logic for filtering it out prior to sending as part of the
+        // conversation
         setErrorMessage(text);
       };
 
@@ -110,10 +113,7 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
             if ((part as any).type === "error") {
               if (RetryError.isInstance((part as any).error)) {
                 const err = (part as any).error as RetryError;
-                const statusCode = err.errors?.find(
-                  (x) => (x as APICallError).statusCode
-                  // @ts-ignore
-                )?.statusCode;
+                const statusCode = err.errors?.find((x) => APICallError.isInstance(x))?.statusCode;
                 handleStatus(statusCode ?? 500, err);
               } else {
                 handleStatus((part as any).error?.statusCode ?? 500, (part as any).error);
@@ -226,7 +226,7 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
       </div>
 
       {errorMessage && (
-        <div className="meta-bg-red-100 meta-border meta-border-red-400 meta-text-red-700 meta-px-4 meta-py-2 meta-mx-4 meta-rounded">
+        <div className="meta-bg-red-100 meta-border meta-border-red-400 meta-text-red-700 meta-px-4 meta-py-2 meta-rounded">
           {errorMessage}
         </div>
       )}
