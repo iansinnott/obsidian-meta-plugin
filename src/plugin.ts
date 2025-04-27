@@ -499,6 +499,11 @@ export class MetaPlugin extends Plugin {
   async saveSettings() {
     await this.saveData(this.settings);
     await this.handleApiSettingsUpdate();
+    // Refresh the sidebar view if it's currently open
+    const leaves = this.app.workspace.getLeavesOfType(META_SIDEBAR_VIEW_TYPE);
+    if (leaves.length > 0) {
+      activateSidebarView(this);
+    }
   }
 
   async refreshModelList(): Promise<string[]> {

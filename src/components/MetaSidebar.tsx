@@ -8,7 +8,7 @@ import { PromptInput } from "./PromptInput";
 import { AgentResponseArea } from "./ResponseArea";
 import type { ResponseChunk } from "./types";
 import classNames from "classnames";
-import { generateId } from "ai";
+import { generateId, APICallError, AISDKError, RetryError } from "ai";
 
 interface MetaSidebarProps {
   plugin: IMetaPlugin;
@@ -30,6 +30,7 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
   const threadId = "root";
   const { messages, chunks, appendMessage, appendResponseChunk, reset, getMessages } =
     useChunkedMessages(plugin.agent?.name, threadId);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = useCallback(
     async (prompt: string) => {
@@ -40,7 +41,7 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
         );
         abortControllerRef.current?.abort();
       }
-
+      setErrorMessage(null);
       // Set up loading and cancellation
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -53,13 +54,49 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
         id: generateId(),
       } satisfies Message);
 
+      // Helper to append an assistant message
+      const showAssistant = (text: string) => {
+        const msg: Message = {
+          role: "assistant",
+          content: [{ type: "text", text }],
+          id: generateId(),
+        };
+        appendMessage(msg);
+      };
+
+      // Handle HTTP status codes and show friendly messages
+      const handleStatus = (code: number, err: unknown) => {
+        let text: string;
+        switch (code) {
+          case 401:
+          case 403:
+            text =
+              "🔑 Your API key or plan is invalid or has been revoked. Please check billing or re-authenticate. You can enter your own API key in the settings.";
+            break;
+          case 429: {
+            const retry = (err as any).responseHeaders?.["retry-after"];
+            text = retry
+              ? `You've hit your monthly free quota. Try again after ${retry}s or enter your own API key in the settings to avoid this.`
+              : "Quota exhausted. Please enter your own API key in the settings or wait for reset.";
+            break;
+          }
+          case 400:
+            text = "Bad request — check prompt size, model name, or other parameters.";
+            break;
+          default:
+            text = `Error ${code}. Please try again later.`;
+        }
+        showAssistant(text);
+        setErrorMessage(text);
+      };
+
       try {
         if (plugin.agent) {
-          const messages = getMessages();
+          const currentMessages = getMessages();
           const stream = plugin.agent.streamText(
             {
-              // @ts-expect-error - some deeply nested thing
-              messages,
+              // @ts-expect-error - custom Message[] is not assignable to CoreMessage[]
+              messages: currentMessages,
               maxSteps: plugin.agent.settings.maxSteps || 10,
               maxRetries: plugin.agent.settings.maxRetries || 2,
               maxTokens: plugin.agent.settings.maxTokens || 8000,
@@ -69,43 +106,41 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
             ctx
           );
 
-          for await (const chunk of stream.fullStream) {
-            appendResponseChunk(chunk as ResponseChunk);
+          for await (const part of stream.fullStream) {
+            if ((part as any).type === "error") {
+              if (RetryError.isInstance((part as any).error)) {
+                const err = (part as any).error as RetryError;
+                const statusCode = err.errors?.find(
+                  (x) => (x as APICallError).statusCode
+                  // @ts-ignore
+                )?.statusCode;
+                handleStatus(statusCode ?? 500, err);
+              } else {
+                handleStatus((part as any).error?.statusCode ?? 500, (part as any).error);
+              }
+              break;
+            }
+            appendResponseChunk(part as ResponseChunk);
           }
         } else {
-          const errorMessage = "Agent not initialized. Please check your settings.";
-          const errorAssistantMessage: Message = {
-            role: "assistant",
-            content: [{ type: "text", text: errorMessage }],
-            id: `error-${Date.now()}`,
-          };
-          appendMessage(errorAssistantMessage);
+          showAssistant("Agent not initialized. Please check your settings.");
         }
-      } catch (error: any) {
-        if (error.name === "AbortError") {
-          // User cancelled the request
-          const cancelMessage: Message = {
-            role: "assistant",
-            content: [{ type: "text", text: "Request cancelled." }],
-            id: `cancel-${Date.now()}`,
-          };
-          appendMessage(cancelMessage);
+      } catch (err: any) {
+        if (APICallError.isInstance(err)) {
+          handleStatus(err.statusCode ?? 500, err);
+        } else if (err.name === "AbortError") {
+          showAssistant("Request cancelled.");
         } else {
-          console.error("Error:", error);
-          const errorMessage = `Error: ${error.message || String(error)}`;
-          const errorAssistantMessage: Message = {
-            role: "assistant",
-            content: [{ type: "text", text: errorMessage }],
-            id: `error-${Date.now()}`,
-          };
-          appendMessage(errorAssistantMessage);
+          const unexpected = `Unexpected error: ${err.message || err}`;
+          showAssistant(unexpected);
+          setErrorMessage(unexpected);
         }
       } finally {
         setIsLoading(false);
         abortControllerRef.current = null;
       }
     },
-    [plugin, ctx, appendMessage, appendResponseChunk, getMessages]
+    [plugin, ctx, appendMessage, appendResponseChunk, getMessages, setErrorMessage]
   );
 
   const handleCancellation = useCallback(() => {
@@ -189,6 +224,12 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
       <div className="meta-sticky meta-bottom-0 meta-left-0 meta-right-0">
         <PromptInput onSubmit={handleSubmit} onCancel={handleCancellation} isLoading={isLoading} />
       </div>
+
+      {errorMessage && (
+        <div className="meta-bg-red-100 meta-border meta-border-red-400 meta-text-red-700 meta-px-4 meta-py-2 meta-mx-4 meta-rounded">
+          {errorMessage}
+        </div>
+      )}
     </div>
   );
 };

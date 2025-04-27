@@ -57,7 +57,7 @@ export const DEFAULT_SETTINGS = {
   model: "claude-3-7-sonnet-20250219",
   availableModels: [] as string[],
   maxSteps: 20,
-  maxRetries: 2,
+  maxRetries: 1,
   maxTokens: 8000,
 };
 
@@ -160,15 +160,15 @@ export class MetaSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Base URL")
       .setDesc("Enter the base URL for the API or select a preset below.")
-      .addText((text) =>
-        text
-          .setPlaceholder("https://api.openai.com")
-          .setValue(this.plugin.settings.baseUrl)
-          .onChange(async (value) => {
-            this.plugin.settings.baseUrl = value;
-            await this.plugin.saveSettings();
-          })
-      );
+      .addText((text) => {
+        text.setPlaceholder("https://api.openai.com").setValue(this.plugin.settings.baseUrl);
+        text.inputEl.addEventListener("blur", async () => {
+          const value = text.inputEl.value;
+          this.plugin.settings.baseUrl = value;
+          await this.plugin.saveSettings();
+        });
+        return text;
+      });
 
     // Add a separate section for preset API endpoint buttons
     const presetButtonSetting = new Setting(containerEl);
@@ -281,7 +281,7 @@ export class MetaSettingTab extends PluginSettingTab {
       .setDesc("Maximum number of steps the agent can take.")
       .addText((text) =>
         text
-          .setPlaceholder("35")
+          .setPlaceholder("25")
           .setValue(String(this.plugin.settings.maxSteps))
           .onChange(async (value) => {
             const numValue = parseInt(value, 10);
@@ -297,7 +297,7 @@ export class MetaSettingTab extends PluginSettingTab {
       .setDesc("Maximum number of retries for failed steps.")
       .addText((text) =>
         text
-          .setPlaceholder("2")
+          .setPlaceholder("1")
           .setValue(String(this.plugin.settings.maxRetries))
           .onChange(async (value) => {
             const numValue = parseInt(value, 10);
