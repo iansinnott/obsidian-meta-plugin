@@ -1,6 +1,6 @@
 {
   "name": "vibesidian",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "A plugin for Obsidian that can modify Obsidian. It can create or modify plugins, themes and settings. Think of it as your personal Obsidian developer.",
   "main": "main.js",
   "scripts": {
