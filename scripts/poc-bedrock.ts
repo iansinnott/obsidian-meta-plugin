@@ -30,8 +30,8 @@ const sonnet = bedrock(SONNET_ARN);
     if (chunk.type === "text-delta") {
       process.stdout.write(chunk.textDelta);
     } else {
-      console.log("\n");
-      console.log(chunk);
+      console.debug("\n");
+      console.debug(chunk);
     }
   }
 })();

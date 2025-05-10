@@ -27,7 +27,7 @@ export const weatherTool = tool({
   }),
   // The execute function now accepts the context as the second parameter
   execute: async ({ location }, options: ToolExecutionOptions & { context?: unknown }) => {
-    console.log("\n\nWeather tool called with context:", options.context);
+    console.debug("\n\nWeather tool called with context:", options.context);
     return getWeather(location);
   },
 });

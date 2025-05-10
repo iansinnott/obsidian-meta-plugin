@@ -20,7 +20,7 @@ const rl = readline.createInterface({
 (async () => {
   // Prompt user for search query
   rl.question("Enter your search query: ", async (searchQuery) => {
-    console.log(`Searching for: ${searchQuery}`);
+    console.debug(`Searching for: ${searchQuery}`);
 
     try {
       const result = await generateText({
@@ -36,17 +36,17 @@ const rl = readline.createInterface({
       });
 
       // Display the result
-      console.log("\nResult:");
-      console.log(result.text);
+      console.debug("\nResult:");
+      console.debug(result.text);
 
       // Display sources
-      console.log("\nSources:");
+      console.debug("\nSources:");
       if (result.sources && result.sources.length > 0) {
         result.sources.forEach((source, index) => {
-          console.log(`[${index + 1}] ${source.title}: ${source.url}`);
+          console.debug(`[${index + 1}] ${source.title}: ${source.url}`);
         });
       } else {
-        console.log("No sources found");
+        console.debug("No sources found");
       }
     } catch (error) {
       console.dir(error, { depth: null });

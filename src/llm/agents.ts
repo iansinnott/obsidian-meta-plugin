@@ -453,20 +453,20 @@ const omp = this.app.plugins.getPlugin('vibesidian');
 const res = await omp.generateText({
   prompt: "whats 2 + 2?",
 });
-console.log(res.text);
+console.debug(res.text);
 
 // or, if you need to pass an array of messages.
 const res = await omp.generateText({
   messages: [ { role: "user", content: "hey" } ],
 });
-console.log(res.text);
+console.debug(res.text);
 
 // Or, if you need streaming (note, stream result is not a promise):
 const stream = omp.streamText({
   messages: [ { role: "user", content: "whats 2 + 2?" } ],
 });
 for await (const chunk of stream.textStream) {
-  console.log(chunk.text);
+  console.debug(chunk.text);
 }
 
 \`\`\`

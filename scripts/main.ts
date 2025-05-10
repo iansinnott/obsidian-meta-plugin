@@ -63,11 +63,11 @@ const commands: CLICommandSPec<CLIContext> = {
         maxRetries: 2,
         maxTokens: 8000,
       });
-      console.log(result.text);
-      console.log("\n------- USAGE -------");
-      console.log(fmt(result.usage));
-      console.log("\n------- STEPS -------");
-      console.log(fmt(result.steps.map((x) => omit(x, ["request", "response", "usage"]))));
+      console.debug(result.text);
+      console.debug("\n------- USAGE -------");
+      console.debug(fmt(result.usage));
+      console.debug("\n------- STEPS -------");
+      console.debug(fmt(result.steps.map((x) => omit(x, ["request", "response", "usage"]))));
     },
   },
 
@@ -88,7 +88,7 @@ const commands: CLICommandSPec<CLIContext> = {
       const fileBackups = new Map<string, string>();
 
       // Initialize conversation with Claude using the text editor tool
-      console.log(`Starting file edit session for ${filePath} with prompt: ${prompt}`);
+      console.debug(`Starting file edit session for ${filePath} with prompt: ${prompt}`);
 
       // Use the refactored anthropic provider
       const anthropicWithEditor = createAnthropic({
@@ -122,17 +122,17 @@ const commands: CLICommandSPec<CLIContext> = {
           maxSteps: 15, // Limit the maximum number of interactions
           maxRetries: 2,
           onStepFinish: ({ request, response, ...step }) => {
-            console.log("step", step);
+            console.debug("step", step);
           },
         });
 
-        console.log("\n===== Request Body =====");
-        console.log(result.request.body);
-        console.log("\n===== Claude's Response =====");
+        console.debug("\n===== Request Body =====");
+        console.debug(result.request.body);
+        console.debug("\n===== Claude's Response =====");
         console.dir(result.response.messages, { depth: null });
 
-        console.log("\n===== Usage Information =====");
-        console.log(fmt(result.usage));
+        console.debug("\n===== Usage Information =====");
+        console.debug(fmt(result.usage));
       } catch (error) {
         console.error("Error during file editing session:", error);
       }
@@ -151,7 +151,7 @@ const commands: CLICommandSPec<CLIContext> = {
           } satisfies AnthropicProviderOptions,
         },
       });
-      console.log(result.text);
+      console.debug(result.text);
     },
   },
 
@@ -161,7 +161,7 @@ const commands: CLICommandSPec<CLIContext> = {
    * $ bun run script.ts printArgs hey --there=you
    */
   "dev:print-args": async (ctx) => {
-    console.log(`args=${JSON.stringify(ctx.args)} flags=${JSON.stringify(ctx.flags)}`);
+    console.debug(`args=${JSON.stringify(ctx.args)} flags=${JSON.stringify(ctx.flags)}`);
   },
 };
 

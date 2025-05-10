@@ -105,7 +105,7 @@ export class ChunkProcessor {
         // Nothing to do on final finish
         break;
       default:
-        console.log(`[ChunkProcessor] unknown chunk type:`, chunk);
+        console.debug(`[ChunkProcessor] unknown chunk type:`, chunk);
         break;
     }
   }

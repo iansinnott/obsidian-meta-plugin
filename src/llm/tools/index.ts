@@ -67,7 +67,7 @@ export const createDirectReportDelegationTool = <TContext>(
       } catch (error: any) {
         if (error.name === "AbortError" || error.message === "Delegation aborted by signal.") {
           // Handle cancellation specifically
-          console.log(`Delegation to agent ${agentId} cancelled.`);
+          console.debug(`Delegation to agent ${agentId} cancelled.`);
           // Optionally return a specific message or re-throw a custom error
           throw new Error(`Delegation to agent ${agentId} was cancelled.`);
         } else {

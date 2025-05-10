@@ -16,7 +16,7 @@ const rl = readline.createInterface({
 });
 
 async function runCommand(command) {
-  console.log(`\\nRunning: ${command}`);
+  console.debug(`\\nRunning: ${command}`);
   try {
     execSync(command, { stdio: "inherit" });
   } catch (error) {
@@ -40,7 +40,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`Current version: ${currentVersion}`);
+  console.debug(`Current version: ${currentVersion}`);
 
   const versionParts = currentVersion.split(".");
   const defaultPatch = `${versionParts[0]}.${versionParts[1]}.${parseInt(versionParts[2], 10) + 1}`;
@@ -57,13 +57,13 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`Updating package.json to version ${newVersion}...`);
+  console.debug(`Updating package.json to version ${newVersion}...`);
   const updatedPackageJson = JSON.parse(packageJsonContent);
   updatedPackageJson.version = newVersion;
 
   try {
     await fs.writeFile(packageJsonPath, JSON.stringify(updatedPackageJson, null, 2) + "\n");
-    console.log("package.json updated successfully.");
+    console.debug("package.json updated successfully.");
   } catch (error) {
     console.error("Error writing package.json:", error);
     process.exit(1);
@@ -77,7 +77,7 @@ async function main() {
   await runCommand("bun run tag"); // This reads from manifest.json, which 'version' updates
   await runCommand("bun run dist");
 
-  console.log(`\\nRelease process completed for version ${newVersion}.`);
+  console.debug(`\\nRelease process completed for version ${newVersion}.`);
   rl.close();
 }
 

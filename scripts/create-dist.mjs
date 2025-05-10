@@ -26,7 +26,7 @@ try {
   const releasesDir = path.join(rootDir, "releases");
   if (!fs.existsSync(releasesDir)) {
     fs.mkdirSync(releasesDir, { recursive: true });
-    console.log("Created releases directory");
+    console.debug("Created releases directory");
   }
 
   // Create zip command with output in releases directory
@@ -35,10 +35,10 @@ try {
   const zipCommand = `zip -r "${zipFilePath}" ${filesToZip.join(" ")}`;
 
   // Execute the zip command
-  console.log(`Creating distribution package: ${zipFilePath}`);
+  console.debug(`Creating distribution package: ${zipFilePath}`);
   execSync(zipCommand, { stdio: "inherit" });
 
-  console.log(`\nDistribution package created successfully: ${zipFilePath}`);
+  console.debug(`\nDistribution package created successfully: ${zipFilePath}`);
 } catch (error) {
   console.error("Error creating distribution package:", error);
   process.exit(1);

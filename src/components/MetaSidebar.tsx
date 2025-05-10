@@ -145,7 +145,7 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
 
   const handleCancellation = useCallback(() => {
     if (abortControllerRef.current) {
-      console.log(
+      console.debug(
         "%c[handleCancellation] abortControllerRef.current",
         "color: red;",
         abortControllerRef.current
@@ -187,7 +187,7 @@ export const MetaSidebar: React.FC<MetaSidebarProps> = ({ plugin, component }) =
           <button
             onClick={() => {
               if (abortControllerRef.current) {
-                console.log(
+                console.debug(
                   "%c[abort prev] abortControllerRef.current",
                   "color: red;",
                   abortControllerRef.current

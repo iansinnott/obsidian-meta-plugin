@@ -26,7 +26,7 @@ const getBaseCLIContext = async (_args: string[]) => {
 export type BaseCLIContext = Awaited<ReturnType<typeof getBaseCLIContext>>;
 
 const showHelp = (commands: Record<string, Function | { description: string; exec: Function }>) => {
-  console.log(`
+  console.debug(`
     Usage:
       $ cli <command> [options]
 
@@ -34,9 +34,9 @@ const showHelp = (commands: Record<string, Function | { description: string; exe
 
   for (const [k, v] of Object.entries(commands)) {
     if (typeof v === "function") {
-      console.log(`      ${k}`);
+      console.debug(`      ${k}`);
     } else {
-      console.log(`      ${k}: ${(v as any).description}`);
+      console.debug(`      ${k}: ${(v as any).description}`);
     }
   }
 };

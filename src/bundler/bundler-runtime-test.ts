@@ -30,7 +30,7 @@ import { Plugin, MarkdownView } from 'obsidian';
 
 export default class SamplePlugin extends Plugin {
   async onload() {
-    console.log('Sample plugin loaded!');
+    console.debug('Sample plugin loaded!');
     
     this.addCommand({
       id: 'sample-command',
@@ -47,7 +47,7 @@ export default class SamplePlugin extends Plugin {
   }
 
   onunload() {
-    console.log('Sample plugin unloaded!');
+    console.debug('Sample plugin unloaded!');
   }
 }
 `;
@@ -109,12 +109,12 @@ import { VERSION } from './src/version';
 
 export default class AdvancedPlugin extends Plugin {
   async onload() {
-    console.log(\`Advanced plugin v\${VERSION} loaded!\`);
+    console.debug(\`Advanced plugin v\${VERSION} loaded!\`);
     createAdvancedCommand(this);
   }
 
   onunload() {
-    console.log('Advanced plugin unloaded!');
+    console.debug('Advanced plugin unloaded!');
   }
 }
 `;
