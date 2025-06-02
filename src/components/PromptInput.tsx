@@ -10,21 +10,30 @@ export const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, isLoading, o
   const [inputValue, setInputValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Function to auto-resize the textarea based on content
-  const autoResize = () => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      // Reset height to auto to get the correct scrollHeight
-      textarea.style.height = "auto";
-      // Set the height to match content (scrollHeight)
-      textarea.style.height = `${textarea.scrollHeight}px`;
-    }
-  };
-
-  // Apply auto-resize when input value changes
+  // Handle textarea auto-resize with CSS and a ResizeObserver
   useEffect(() => {
-    autoResize();
-  }, [inputValue]);
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // Create a ResizeObserver to handle content changes
+    const resizeObserver = new ResizeObserver(() => {
+      // Let CSS handle the height with scrollHeight
+      textarea.classList.add("auto-resize-active");
+    });
+
+    // Start observing
+    resizeObserver.observe(textarea);
+
+    // Clean up
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  // Handle input change
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputValue(e.target.value);
+  };
 
   const handleSubmit = () => {
     const trimmedValue = inputValue.trim();
@@ -48,14 +57,13 @@ export const PromptInput: React.FC<PromptInputProps> = ({ onSubmit, isLoading, o
         <div className={`meta-w-full ${isLoading ? "meta-rotating-border-wrapper" : ""}`}>
           <textarea
             ref={textareaRef}
-            className="meta-w-full meta-p-2 meta-pr-10 meta-rounded-md meta-border meta-border-gray-300 dark:meta-border-gray-600 dark:meta-bg-gray-800 meta-text-gray-900 dark:meta-text-gray-100 meta-resize-none meta-focus:ring-2 meta-focus:ring-blue-500 meta-focus:border-blue-500 meta-outline-none meta-transition meta-min-h-[40px] meta-overflow-hidden"
+            className="meta-w-full meta-p-2 meta-pr-10 meta-rounded-md meta-border meta-border-gray-300 dark:meta-border-gray-600 dark:meta-bg-gray-800 meta-text-gray-900 dark:meta-text-gray-100 meta-resize-none meta-focus:ring-2 meta-focus:ring-blue-500 meta-focus:border-blue-500 meta-outline-none meta-transition meta-min-h-[40px] meta-overflow-hidden vibesidian-line-height-normal vibesidian-auto-resize"
             placeholder="What can we do for you?"
             rows={1}
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             disabled={isLoading}
-            style={{ lineHeight: "normal" }}
           />
         </div>
         <button

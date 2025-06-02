@@ -489,8 +489,7 @@ export class MetaPlugin extends Plugin {
       this.bundler = undefined;
     }
 
-    // Detach any leaves with our view type
-    this.app.workspace.detachLeavesOfType(META_SIDEBAR_VIEW_TYPE);
+    // Do not detach leaves - Obsidian will handle this automatically
   }
 
   async loadSettings() {

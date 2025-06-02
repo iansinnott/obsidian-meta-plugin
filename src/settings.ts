@@ -121,24 +121,23 @@ export class MetaSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     containerEl.createEl("h3", { text: "LLM Connection Settings" });
-    let el;
-    el = containerEl.createEl("p");
-    el.innerHTML = `This plugin comes <i>pre-configured</i> with LLM access, but you can configure your own here.`;
-    el = containerEl.createEl("p");
-    el.innerHTML =
-      "Be sure to use <i>intelligent</i> models. Lesser models generally will <i>not</i> work.";
-    el = containerEl.createEl("p");
-    el.style.padding = "0.5rem";
-    el.style.borderRadius = "0.25rem";
-    el.style.borderWidth = "1px";
-    el.style.borderStyle = "solid";
-    el.style.backgroundColor = "rgba(254, 252, 191, 0.12)"; // light yellow with alpha
-    el.style.borderColor = "var(--border-warning, #fde047)";
-    el.style.color = "var(--text-warning, #92400e)";
-    el.style.fontSize = "0.875rem";
-    el.style.marginBottom = "1rem";
 
-    el.innerHTML = `<strong>Beta Notice:</strong> LLM access is currently provided for free while this plugin is in beta. I cover the costs. This may change in future versions, potentially requiring you to configure your own API key and endpoint.`;
+    const preConfiguredPara = containerEl.createEl("p");
+    preConfiguredPara.appendText("This plugin comes ");
+    preConfiguredPara.createEl("i", { text: "pre-configured" });
+    preConfiguredPara.appendText(" with LLM access, but you can configure your own here.");
+
+    const intelligentModelsPara = containerEl.createEl("p");
+    intelligentModelsPara.appendText("Be sure to use ");
+    intelligentModelsPara.createEl("i", { text: "intelligent" });
+    intelligentModelsPara.appendText(" models. Lesser models generally will ");
+    intelligentModelsPara.createEl("i", { text: "not" });
+    intelligentModelsPara.appendText(" work.");
+
+    const betaNoticePara = containerEl.createEl("p", { cls: "vibesidian-beta-notice" });
+
+    const strongNotice = betaNoticePara.createEl("strong", { text: "Beta Notice: " });
+    betaNoticePara.appendText("LLM access is currently provided for free while this plugin is in beta. I cover the costs. This may change in future versions, potentially requiring you to configure your own API key and endpoint.");
 
     new Setting(containerEl)
       .setName("API Key")
@@ -172,7 +171,7 @@ export class MetaSettingTab extends PluginSettingTab {
 
     // Add a separate section for preset API endpoint buttons
     const presetButtonSetting = new Setting(containerEl);
-    presetButtonSetting.settingEl.style.borderTop = "none";
+    presetButtonSetting.settingEl.addClass("vibesidian-no-border-top");
 
     // Add Default button with fetching a new API key
     presetButtonSetting.addButton((button) => {
@@ -238,8 +237,8 @@ export class MetaSettingTab extends PluginSettingTab {
 
     const modelSetting = new Setting(containerEl);
 
-    modelSetting.infoEl.style.display = "none";
-    modelSetting.settingEl.style.borderTop = "none";
+    modelSetting.infoEl.addClass("vibesidian-hidden");
+    modelSetting.settingEl.addClass("vibesidian-no-border-top");
 
     // Dropdown for model selection
     modelSetting.addDropdown((dropdown) => {

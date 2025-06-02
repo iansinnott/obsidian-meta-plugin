@@ -55,3 +55,58 @@
 }
 
 /* Custom styles can go here */
+/* Beta notice styling */
+.vibesidian-beta-notice {
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  border-width: 1px;
+  border-style: solid;
+  background-color: rgba(254, 252, 191, 0.12);
+  border-color: var(--border-warning, #fde047);
+  color: var(--text-warning, #92400e);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+/* Animation for shimmer text */
+@keyframes shimmer {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+.shimmer-text {
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* Hidden overflow styling for animated elements */
+.overflow-hidden {
+  overflow: hidden;
+}
+
+/* Settings UI styling */
+.vibesidian-no-border-top {
+  border-top: none !important;
+}
+
+.vibesidian-hidden {
+  display: none !important;
+}
+
+/* Textarea auto-resizing */
+.vibesidian-line-height-normal {
+  line-height: normal;
+}
+
+.vibesidian-auto-resize {
+  overflow-y: hidden;
+  resize: none;
+  min-height: 40px;
+  height: auto;
+}
+
+.auto-resize-active {
+  height: auto !important;
+}
